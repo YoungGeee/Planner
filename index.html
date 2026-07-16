@@ -14,6 +14,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
     --bg:#0a0c11;
@@ -83,6 +84,35 @@
     transition:.15s;
   }
   .icon-btn:hover{ background:var(--surface-3); color:var(--text); }
+  .app.hidden{ display:none; }
+
+  /* ---------- Auth screen ---------- */
+  .auth-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .auth-screen.hidden{ display:none; }
+  .auth-box{
+    width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:28px 22px; box-shadow:var(--shadow);
+  }
+  .auth-sub{ color:var(--text-dim); font-size:13px; margin-bottom:10px; }
+  .auth-box input{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    border-radius:var(--radius-sm); padding:12px 14px; font-size:14px; text-align:right;
+    direction:ltr; text-align:left;
+  }
+  .auth-box input:focus{ outline:none; border-color:var(--accent); }
+  .auth-error{ color:var(--bad); font-size:12.5px; min-height:16px; }
+  .auth-btn{
+    border:none; border-radius:var(--radius-sm); padding:12px; font-size:14px; font-weight:700;
+    background:var(--surface-2); color:var(--text); margin-top:2px; transition:.15s;
+  }
+  .auth-btn:hover{ background:var(--surface-3); }
+  .auth-btn.primary{ background:var(--accent); color:#1a1206; }
+  .auth-btn.primary:hover{ filter:brightness(1.05); }
+  .auth-btn:disabled{ opacity:.6; cursor:default; }
 
   main{ flex:1; padding:6px 16px 20px; }
   .tab-panel{ display:none; animation:fadeIn .25s ease; }
@@ -307,14 +337,17 @@
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app hidden" id="appRoot">
 
   <header class="topbar">
     <div>
       <div class="brand-title">پلنر شخصی</div>
       <div class="brand-date" id="headerDate">—</div>
     </div>
-    <button class="icon-btn" id="resetBtn" title="بازنشانی کامل داده‌ها">⟲</button>
+    <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="logoutBtn" title="خروج از حساب">⏻</button>
+      <button class="icon-btn" id="resetBtn" title="بازنشانی کامل داده‌ها">⟲</button>
+    </div>
   </header>
 
   <nav class="tabbar">
@@ -336,6 +369,18 @@
   </main>
 </div>
 
+<div class="auth-screen" id="authScreen">
+  <div class="auth-box">
+    <div class="brand-title" style="margin-bottom:4px;">پلنر شخصی</div>
+    <div class="auth-sub" id="authSub">برای استفاده وارد حساب خودت شو</div>
+    <input type="email" id="authEmail" placeholder="ایمیل" autocomplete="email">
+    <input type="password" id="authPassword" placeholder="رمز عبور" autocomplete="current-password">
+    <div class="auth-error" id="authError"></div>
+    <button class="auth-btn primary" id="loginBtn">ورود</button>
+    <button class="auth-btn" id="signupBtn">ساخت حساب جدید</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modalOverlay">
   <div class="modal" id="modalBody"></div>
 </div>
@@ -344,28 +389,138 @@
 (function(){
   "use strict";
 
-  /* ============================= Storage ============================= */
-  var STORAGE_KEY = "personalPlannerData_v1";
+  /* ============================= Supabase / Cloud Storage ============================= */
+  var SUPABASE_URL = "https://suhlfgqicetqktwcymqa.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_R-49m_1Ay9TLaJ8swZfRag_AYn5ktff";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var TABLE = "planner_data";
+  var currentUser = null;
+  var saveTimer = null;
 
   function defaultState(){
     return { habits: [], rewards: [], notes: {} };
   }
-  function loadState(){
-    try{
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return defaultState();
-      var parsed = JSON.parse(raw);
-      if(!parsed.habits) parsed.habits = [];
-      if(!parsed.rewards) parsed.rewards = [];
-      if(!parsed.notes) parsed.notes = {};
-      return parsed;
-    }catch(e){ return defaultState(); }
-  }
+
+  // Debounced write to Supabase — waits a bit after the last change before sending,
+  // so typing in the note textarea doesn't fire a network request per keystroke.
   function saveState(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      if(!currentUser) return;
+      sb.from(TABLE).upsert({
+        user_id: currentUser.id,
+        data: state,
+        updated_at: new Date().toISOString()
+      }).then(function(res){
+        if(res.error) console.error("save error", res.error);
+      });
+    }, 500);
   }
 
-  var state = loadState();
+  // Loads (or creates) this user's row from Supabase and populates the existing
+  // `state` object in place, so every closure that already captured `state` still
+  // points at the right data.
+  function fetchState(){
+    return sb.from(TABLE).select("data").eq("user_id", currentUser.id).maybeSingle()
+      .then(function(res){
+        if(res.error){ console.error("load error", res.error); return; }
+        var loaded = (res.data && res.data.data) ? res.data.data : null;
+        if(!loaded){
+          loaded = defaultState();
+          return sb.from(TABLE).insert({ user_id: currentUser.id, data: loaded }).then(function(){
+            applyState(loaded);
+          });
+        }
+        if(!loaded.habits) loaded.habits = [];
+        if(!loaded.rewards) loaded.rewards = [];
+        if(!loaded.notes) loaded.notes = {};
+        applyState(loaded);
+      });
+  }
+
+  function applyState(loaded){
+    state.habits = loaded.habits;
+    state.rewards = loaded.rewards;
+    state.notes = loaded.notes;
+  }
+
+  var state = defaultState();
+
+  /* ============================= Auth ============================= */
+  var authScreen = document.getElementById("authScreen");
+  var appRoot = document.getElementById("appRoot");
+  var authEmail = document.getElementById("authEmail");
+  var authPassword = document.getElementById("authPassword");
+  var authError = document.getElementById("authError");
+  var authSub = document.getElementById("authSub");
+
+  function showApp(){
+    authScreen.classList.add("hidden");
+    appRoot.classList.remove("hidden");
+  }
+  function showAuth(msg){
+    appRoot.classList.add("hidden");
+    authScreen.classList.remove("hidden");
+    authError.textContent = msg || "";
+  }
+  function setAuthBusy(busy){
+    document.getElementById("loginBtn").disabled = busy;
+    document.getElementById("signupBtn").disabled = busy;
+    authSub.textContent = busy ? "در حال ارتباط..." : "برای استفاده وارد حساب خودت شو";
+  }
+
+  document.getElementById("loginBtn").addEventListener("click", function(){
+    var email = authEmail.value.trim(), pass = authPassword.value;
+    if(!email || !pass){ authError.textContent = "ایمیل و رمز عبور رو وارد کن"; return; }
+    setAuthBusy(true);
+    sb.auth.signInWithPassword({ email: email, password: pass }).then(function(res){
+      setAuthBusy(false);
+      if(res.error){ authError.textContent = "ورود ناموفق: " + res.error.message; return; }
+      onAuthed(res.data.user);
+    });
+  });
+
+  document.getElementById("signupBtn").addEventListener("click", function(){
+    var email = authEmail.value.trim(), pass = authPassword.value;
+    if(!email || !pass){ authError.textContent = "ایمیل و رمز عبور رو وارد کن"; return; }
+    if(pass.length < 6){ authError.textContent = "رمز عبور باید حداقل ۶ کاراکتر باشه"; return; }
+    setAuthBusy(true);
+    sb.auth.signUp({ email: email, password: pass }).then(function(res){
+      setAuthBusy(false);
+      if(res.error){ authError.textContent = "ثبت‌نام ناموفق: " + res.error.message; return; }
+      if(res.data.session){
+        onAuthed(res.data.user);
+      } else {
+        authError.textContent = "";
+        authSub.textContent = "حساب ساخته شد. ایمیلت رو برای تأیید چک کن، بعد وارد شو.";
+      }
+    });
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", function(){
+    sb.auth.signOut().then(function(){
+      currentUser = null;
+      state = defaultState();
+      showAuth();
+    });
+  });
+
+  function onAuthed(user){
+    currentUser = user;
+    fetchState().then(function(){
+      showApp();
+      renderAll();
+    });
+  }
+
+  sb.auth.getSession().then(function(res){
+    var session = res.data && res.data.session;
+    if(session && session.user){
+      onAuthed(session.user);
+    } else {
+      showAuth();
+    }
+  });
 
   /* ============================= Date helpers ============================= */
   function pad(n){ return n<10 ? "0"+n : ""+n; }
@@ -996,7 +1151,7 @@
   });
 
   /* ============================= Init ============================= */
-  renderAll();
+  /* Rendering happens once auth resolves — see onAuthed() above. */
 
 })();
   if("serviceWorker" in navigator){
