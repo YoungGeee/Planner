@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>پلنر شخصی</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0c11">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="پلنر">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0c11;
+    --bg-2:#0d1017;
+    --surface:#12151d;
+    --surface-2:#1a1e29;
+    --surface-3:#232838;
+    --border:#252b3a;
+    --text:#eceef3;
+    --text-dim:#8991a6;
+    --text-dimmer:#5d6579;
+    --accent:#f2b84b;
+    --accent-dim:#7a6229;
+    --good:#3ecf9b;
+    --good-dim:#1c4a3c;
+    --bad:#f0605a;
+    --bad-dim:#4a2321;
+    --ring-track:#1c2029;
+    --radius-lg:22px;
+    --radius-md:16px;
+    --radius-sm:10px;
+    --shadow: 0 8px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(242,184,75,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, rgba(62,207,155,.06), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Vazirmatn', system-ui, sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--accent); color:#1a1206; }
+  button{ font-family:inherit; cursor:pointer; }
+  input, textarea{ font-family:inherit; }
+  .app{
+    max-width:760px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding-bottom:96px;
+  }
+
+  /* ---------- Header ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 20px 14px;
+    background:linear-gradient(180deg, var(--bg) 60%, transparent);
+    backdrop-filter:blur(6px);
+  }
+  .brand-title{
+    font-size:13px; letter-spacing:.5px; color:var(--text-dimmer); font-weight:600;
+  }
+  .brand-date{
+    font-size:22px; font-weight:800; margin-top:2px;
+  }
+  .brand-date b{ color:var(--accent); font-weight:900; }
+  .icon-btn{
+    width:40px; height:40px; border-radius:50%;
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim);
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+    transition:.15s;
+  }
+  .icon-btn:hover{ background:var(--surface-3); color:var(--text); }
+
+  main{ flex:1; padding:6px 16px 20px; }
+  .tab-panel{ display:none; animation:fadeIn .25s ease; }
+  .tab-panel.active{ display:block; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+  /* ---------- Cards / generic ---------- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:18px;
+    margin-bottom:14px;
+    box-shadow:var(--shadow);
+  }
+  .card h3{ margin:0 0 12px; font-size:15px; font-weight:700; color:var(--text); }
+  .row-between{ display:flex; align-items:center; justify-content:space-between; }
+  .muted{ color:var(--text-dim); font-size:13px; }
+  .dimmer{ color:var(--text-dimmer); font-size:12px; }
+  .pill{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:4px 10px; border-radius:999px; font-size:11.5px; font-weight:700;
+  }
+  .pill.good{ background:var(--good-dim); color:var(--good); }
+  .pill.bad{ background:var(--bad-dim); color:var(--bad); }
+  .pill.accent{ background:var(--accent-dim); color:var(--accent); }
+  .pill.neutral{ background:var(--surface-3); color:var(--text-dim); }
+
+  /* ---------- Nav (date/week/month switcher) ---------- */
+  .nav-switch{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .nav-switch .mid{ text-align:center; }
+  .nav-switch .mid .big{ font-weight:800; font-size:16px; }
+  .nav-switch .mid .small{ font-size:12px; color:var(--text-dim); }
+  .chev{
+    width:38px; height:38px; border-radius:50%;
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .chev:active{ transform:scale(.92); }
+  .today-jump{
+    font-size:11px; color:var(--accent); background:none; border:none; padding:2px 0 0;
+  }
+
+  /* ---------- Ring ---------- */
+  .ring-wrap{ display:flex; align-items:center; gap:20px; }
+  .ring-svg-box{ position:relative; width:110px; height:110px; flex:none; }
+  .ring-svg-box svg{ transform:rotate(-90deg); }
+  .ring-center{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:19px; font-weight:900; color:var(--text);
+  }
+  .ring-num{ font-size:20px; font-weight:800; }
+  .ring-label{ font-size:12.5px; color:var(--text-dim); margin-top:4px; }
+  .ring-stats{ display:flex; flex-direction:column; gap:2px; }
+
+  /* ---------- Task / habit row ---------- */
+  .task-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 4px; border-bottom:1px solid var(--border);
+  }
+  .task-row:last-child{ border-bottom:none; }
+  .check{
+    width:26px; height:26px; min-width:26px; border-radius:9px;
+    border:2px solid var(--border); background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center;
+    transition:.15s; font-size:15px; color:transparent;
+  }
+  .check.checked{ background:var(--good); border-color:var(--good); color:#08130f; }
+  .task-info{ flex:1; min-width:0; }
+  .task-name{ font-weight:700; font-size:14.5px; }
+  .task-name.checked-text{ color:var(--text-dim); text-decoration:line-through; text-decoration-color:var(--text-dimmer); }
+  .task-goal{ font-size:12px; color:var(--text-dimmer); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .empty-state{
+    text-align:center; padding:40px 16px; color:var(--text-dimmer);
+  }
+  .empty-state .e-icon{ font-size:34px; margin-bottom:10px; }
+  .empty-state .e-title{ color:var(--text-dim); font-weight:700; margin-bottom:4px; font-size:14px; }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    border:none; border-radius:14px; padding:13px 18px; font-weight:700; font-size:14px;
+    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  }
+  .btn-accent{ background:linear-gradient(135deg, var(--accent), #d99a2b); color:#211603; }
+  .btn-ghost{ background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
+  .btn-danger-ghost{ background:var(--bad-dim); color:var(--bad); }
+  .btn-sm{ width:auto; padding:8px 14px; font-size:12.5px; border-radius:10px; }
+
+  /* ---------- Textarea note ---------- */
+  textarea.note{
+    width:100%; min-height:100px; resize:vertical;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-md);
+    color:var(--text); padding:12px 14px; font-size:13.5px; line-height:1.9;
+  }
+  textarea.note:focus, input:focus{ outline:2px solid var(--accent-dim); }
+
+  /* ---------- Week grid ---------- */
+  .week-table{ width:100%; border-collapse:separate; border-spacing:0; }
+  .week-table th{ font-size:11px; color:var(--text-dimmer); font-weight:600; padding-bottom:8px; }
+  .week-table td{ text-align:center; padding:6px 2px; }
+  .week-habit-name{ text-align:right; font-size:12.5px; font-weight:700; padding:8px 4px; max-width:90px; }
+  .wcell{
+    width:24px; height:24px; border-radius:7px; margin:0 auto;
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text-dimmer);
+  }
+  .wcell.done{ background:var(--good-dim); color:var(--good); border-color:transparent; }
+  .wcell.missed{ background:var(--bad-dim); color:var(--bad); border-color:transparent; }
+  .wcell.future{ opacity:.3; }
+  .wcell.planned{ background:var(--accent-dim); color:var(--accent); border-color:transparent; }
+  .wcell.upcoming{ opacity:.5; border-style:dashed; }
+  .week-pct{ font-weight:800; font-size:13px; }
+
+  .best-worst{ display:flex; flex-direction:column; gap:10px; }
+  .bw-item{ display:flex; align-items:center; justify-content:space-between; background:var(--surface-2); border-radius:var(--radius-sm); padding:10px 12px; }
+  .bw-item .name{ font-size:13px; font-weight:700; }
+  .bw-item .note{ font-size:11px; color:var(--text-dimmer); margin-top:2px; }
+
+  /* ---------- Month heatmap ---------- */
+  .month-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .month-grid .wd{ text-align:center; font-size:10.5px; color:var(--text-dimmer); padding-bottom:4px; }
+  .mcell{
+    aspect-ratio:1; border-radius:9px; background:var(--surface-2); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--text-dim); position:relative;
+  }
+  .mcell.pad{ background:transparent; border:none; }
+  .mcell.today{ box-shadow:0 0 0 2px var(--accent) inset; }
+
+  .dotgrid{ display:flex; flex-wrap:wrap; gap:5px; margin:10px 0 4px; }
+  .dot{ width:11px; height:11px; border-radius:3px; background:var(--surface-3); }
+  .dot.done{ background:var(--good); }
+  .dot.missed{ background:var(--bad); }
+  .dot.future{ background:var(--surface-2); opacity:.5; }
+
+  .progress-bar{ height:9px; border-radius:999px; background:var(--surface-3); overflow:hidden; margin:8px 0; }
+  .progress-bar > div{ height:100%; border-radius:999px; background:linear-gradient(90deg, var(--good), #62e0b3); }
+
+  .habit-card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .habit-title{ font-weight:800; font-size:15px; }
+  .habit-goal{ font-size:12.5px; color:var(--text-dim); margin-top:3px; }
+  .habit-stats-line{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .goal-check-row{
+    display:flex; align-items:center; gap:10px; margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);
+  }
+  .goal-check-row label{ font-size:13px; font-weight:600; color:var(--text-dim); }
+  .goal-check-row.achieved label{ color:var(--good); }
+
+  .habit-actions{ display:flex; gap:8px; margin-top:10px; }
+
+  .reward-row{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--border); }
+  .reward-row-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .reward-row-label{ font-size:13px; font-weight:700; color:var(--text-dim); }
+  .reward-row-text{ font-size:13.5px; margin-bottom:10px; }
+  .btn[disabled]{ opacity:.4; cursor:not-allowed; }
+
+  /* ---------- Rewards ---------- */
+  .reward-item{ display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1px solid var(--border); }
+  .reward-item:last-child{ border-bottom:none; }
+  .reward-text{ flex:1; font-size:13.5px; }
+  .reward-text.done{ color:var(--text-dimmer); text-decoration:line-through; }
+  .x-btn{ background:none; border:none; color:var(--text-dimmer); font-size:16px; padding:4px 6px; }
+  .x-btn:hover{ color:var(--bad); }
+
+  .add-inline{ display:flex; gap:8px; margin-bottom:14px; }
+  .add-inline input{ flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:11px 14px; color:var(--text); font-size:13.5px; }
+
+  /* ---------- Bottom / Top nav ---------- */
+  .tabbar{
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
+    display:flex; justify-content:center;
+    background:linear-gradient(180deg, transparent, rgba(0,0,0,.55) 30%, rgba(0,0,0,.55));
+    padding:0 0 max(10px, env(safe-area-inset-bottom)) 0;
+  }
+  .tabbar-inner{
+    display:flex; gap:4px; background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; padding:6px; margin:0 16px; width:100%; max-width:730px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .tab-btn{
+    flex:1; background:none; border:none; color:var(--text-dimmer);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:9px 2px; border-radius:14px; font-size:10.5px; font-weight:700; transition:.15s;
+  }
+  .tab-btn .ic{ font-size:17px; }
+  .tab-btn.active{ background:var(--surface-3); color:var(--accent); }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(6,7,10,.72); backdrop-filter:blur(3px);
+    display:flex; align-items:flex-end; justify-content:center; z-index:50;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal{
+    background:var(--surface); border:1px solid var(--border); border-radius:22px 22px 0 0;
+    width:100%; max-width:760px; padding:22px 20px 26px; max-height:88vh; overflow-y:auto;
+    animation:slideUp .22s ease;
+  }
+  @keyframes slideUp{ from{ transform:translateY(30px); opacity:0;} to{ transform:none; opacity:1;} }
+  .modal h2{ margin:0 0 16px; font-size:17px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:6px; font-weight:600; }
+  .field input{ width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; color:var(--text); font-size:14px; }
+  .field select{ width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; color:var(--text); font-size:14px; }
+  .field .hint{ font-size:11px; color:var(--text-dimmer); margin-top:5px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+
+  @media (min-width:768px){
+    .app{ padding-bottom:26px; }
+    .tabbar{ position:sticky; top:0; background:none; padding:0; order:-1; }
+    .app{ display:flex; flex-direction:column; }
+    .topbar{ order:0; }
+    .tabbar{ order:1; margin-bottom:6px; }
+    main{ order:2; }
+    .tabbar-inner{ box-shadow:none; margin:0 0 10px; }
+    .modal-overlay{ align-items:center; }
+    .modal{ border-radius:22px; max-width:520px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div>
+      <div class="brand-title">پلنر شخصی</div>
+      <div class="brand-date" id="headerDate">—</div>
+    </div>
+    <button class="icon-btn" id="resetBtn" title="بازنشانی کامل داده‌ها">⟲</button>
+  </header>
+
+  <nav class="tabbar">
+    <div class="tabbar-inner">
+      <button class="tab-btn active" data-tab="today"><span class="ic">◎</span>امروز</button>
+      <button class="tab-btn" data-tab="week"><span class="ic">▤</span>هفتگی</button>
+      <button class="tab-btn" data-tab="month"><span class="ic">▦</span>ماهانه</button>
+      <button class="tab-btn" data-tab="habits"><span class="ic">✚</span>عادت‌ها</button>
+      <button class="tab-btn" data-tab="rewards"><span class="ic">★</span>پاداش</button>
+    </div>
+  </nav>
+
+  <main>
+    <section class="tab-panel active" id="panel-today"></section>
+    <section class="tab-panel" id="panel-week"></section>
+    <section class="tab-panel" id="panel-month"></section>
+    <section class="tab-panel" id="panel-habits"></section>
+    <section class="tab-panel" id="panel-rewards"></section>
+  </main>
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================= Storage ============================= */
+  var STORAGE_KEY = "personalPlannerData_v1";
+
+  function defaultState(){
+    return { habits: [], rewards: [], notes: {} };
+  }
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      if(!parsed.habits) parsed.habits = [];
+      if(!parsed.rewards) parsed.rewards = [];
+      if(!parsed.notes) parsed.notes = {};
+      return parsed;
+    }catch(e){ return defaultState(); }
+  }
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  var state = loadState();
+
+  /* ============================= Date helpers ============================= */
+  function pad(n){ return n<10 ? "0"+n : ""+n; }
+  function toISO(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function todayISO(){ return toISO(new Date()); }
+  function isoToDate(iso){ var p = iso.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); }
+  function addDaysISO(iso, n){ var d = isoToDate(iso); d.setDate(d.getDate()+n); return toISO(d); }
+  function diffDaysISO(a,b){ return Math.round((isoToDate(b) - isoToDate(a)) / 86400000); }
+  function isFuture(iso){ return diffDaysISO(todayISO(), iso) > 0; }
+
+  var WEEKDAY_FA = ["یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه","شنبه"]; // JS getDay: 0..6
+  var WEEKDAY_FA_SHORT = ["ی","د","س","چ","پ","ج","ش"];
+  // Order starting Saturday for week view: Sat, Sun, Mon, Tue, Wed, Thu, Fri
+  var WEEK_ORDER = [6,0,1,2,3,4,5];
+
+  function weekdayName(iso){ return WEEKDAY_FA[isoToDate(iso).getDay()]; }
+
+  /* Gregorian -> Jalali conversion (standard public-domain algorithm) */
+  function gregorianToJalali(gy, gm, gd){
+    var g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
+    var jy;
+    gy = parseInt(gy,10); gm = parseInt(gm,10); gd = parseInt(gd,10);
+    jy = (gy <= 1600) ? 0 : 979;
+    gy -= (gy <= 1600) ? 621 : 1600;
+    var gy2 = (gm > 2) ? (gy + 1) : gy;
+    var days = (365*gy) + parseInt((gy2+3)/4,10) - parseInt((gy2+99)/100,10) + parseInt((gy2+399)/400,10) - 80 + gd + g_d_m[gm-1];
+    jy += 33 * parseInt(days/12053,10);
+    days %= 12053;
+    jy += 4 * parseInt(days/1461,10);
+    days %= 1461;
+    if (days > 365){
+      jy += parseInt((days-1)/365,10);
+      days = (days-1) % 365;
+    }
+    var jm = (days < 186) ? 1 + parseInt(days/31,10) : 7 + parseInt((days-186)/30,10);
+    var jd = 1 + ((days < 186) ? (days % 31) : ((days-186) % 30));
+    return [jy, jm, jd];
+  }
+  var JMONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+  var FA_DIGITS = ["۰","۱","۲","۳","۴","۵","۶","۷","۸","۹"];
+  function faNum(n){ return String(n).replace(/[0-9]/g, function(d){ return FA_DIGITS[+d]; }); }
+  function jalaliOf(iso){
+    var d = isoToDate(iso);
+    var j = gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate());
+    return { y:j[0], m:j[1], d:j[2] };
+  }
+  function jalaliLongDate(iso){
+    var j = jalaliOf(iso);
+    return weekdayName(iso) + "، " + faNum(j.d) + " " + JMONTHS[j.m-1] + " " + faNum(j.y);
+  }
+  function jalaliShort(iso){
+    var j = jalaliOf(iso);
+    return faNum(j.d) + " " + JMONTHS[j.m-1];
+  }
+
+  function uid(){ return "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,8); }
+  function escapeHtml(s){
+    return (s==null?"":String(s)).replace(/[&<>"']/g, function(c){
+      return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
+    });
+  }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+
+  /* ============================= Habit computations ============================= */
+  // A habit is "applicable" (shown/toggleable) on any date from its startDate onward,
+  // including future dates in the current month/week — so newly added habits show
+  // everywhere right away instead of waiting for "today" to reach that date.
+  function isApplicable(habit, iso){
+    return diffDaysISO(habit.startDate, iso) >= 0;
+  }
+  // A day only "counts" toward stats/percentages once it has actually happened.
+  function isCountable(habit, iso){
+    return isApplicable(habit, iso) && !isFuture(iso);
+  }
+  function isDone(habit, iso){ return !!habit.completions[iso]; }
+
+  function habitStats(habit){
+    var elapsed = diffDaysISO(habit.startDate, todayISO()) + 1;
+    if (elapsed < 1) elapsed = 1;
+    var completed = 0;
+    for (var iso in habit.completions){
+      if (habit.completions[iso] && diffDaysISO(habit.startDate, iso) >= 0 && diffDaysISO(iso, todayISO()) >= 0){
+        completed++;
+      }
+    }
+    var target = habit.targetDays || 30;
+    var progressPct = clamp(Math.round((completed / target) * 100), 0, 100);
+    var missed = Math.max(elapsed - completed, 0);
+    var negativePct = clamp(Math.round((missed / elapsed) * 100), 0, 100);
+    return { elapsed: elapsed, completed: completed, target: target, progressPct: progressPct, negativePct: negativePct, missed: missed };
+  }
+
+  function habitWeekStats(habit, weekDates){
+    var countableDates = weekDates.filter(function(iso){ return isCountable(habit, iso); });
+    var doneCount = countableDates.filter(function(iso){ return isDone(habit, iso); }).length;
+    var pct = countableDates.length ? Math.round((doneCount/countableDates.length)*100) : null;
+    var missedNames = countableDates.filter(function(iso){ return !isDone(habit, iso); }).map(weekdayName);
+    return { applicable: countableDates.length, done: doneCount, pct: pct, missedNames: missedNames };
+  }
+
+  /* ============================= Navigation state ============================= */
+  var currentTab = "today";
+  var viewedDayISO = todayISO();
+  var weekOffset = 0;   // 0 = current week
+  var monthOffset = 0;  // 0 = current month
+
+  function currentWeekDates(){
+    var base = new Date();
+    base.setDate(base.getDate() + weekOffset*7);
+    var jsDay = base.getDay(); // 0..6, week starts Saturday(6)
+    var deltaToSaturday = (jsDay - 6 + 7) % 7;
+    var saturday = new Date(base);
+    saturday.setDate(base.getDate() - deltaToSaturday);
+    var dates = [];
+    for (var i=0;i<7;i++){
+      var d = new Date(saturday); d.setDate(saturday.getDate()+i);
+      dates.push(toISO(d));
+    }
+    return dates;
+  }
+
+  function currentMonthInfo(){
+    var base = new Date();
+    base.setMonth(base.getMonth() + monthOffset, 1);
+    var year = base.getFullYear(), month = base.getMonth();
+    var first = new Date(year, month, 1);
+    var last = new Date(year, month+1, 0);
+    return { year:year, month:month, first:first, last:last, daysInMonth:last.getDate() };
+  }
+
+  /* ============================= Rendering ============================= */
+  function renderAll(){
+    var jToday = jalaliOf(todayISO());
+    document.getElementById("headerDate").innerHTML =
+      weekdayName(todayISO()) + "، " + faNum(jToday.d) + " " + JMONTHS[jToday.m-1] + " <b>" + faNum(jToday.y) + "</b>";
+    renderToday();
+    renderWeek();
+    renderMonth();
+    renderHabits();
+    renderRewards();
+  }
+
+  /* ---------- TODAY ---------- */
+  function renderToday(){
+    var el = document.getElementById("panel-today");
+    var applicableHabits = state.habits.filter(function(h){ return isApplicable(h, viewedDayISO); });
+    var doneCount = applicableHabits.filter(function(h){ return isDone(h, viewedDayISO); }).length;
+    var total = applicableHabits.length;
+    var pct = total ? Math.round((doneCount/total)*100) : 0;
+
+    var r = 46, c = 2*Math.PI*r;
+    var offset = c - (pct/100)*c;
+
+    var isToday = viewedDayISO === todayISO();
+    var future = isFuture(viewedDayISO);
+
+    var html = "";
+    html += '<div class="nav-switch">';
+    html += '  <button class="chev" data-act="today-prev">‹</button>';
+    html += '  <div class="mid"><div class="big">'+jalaliShort(viewedDayISO)+'</div><div class="small">'+weekdayName(viewedDayISO)+(future? ' · <span style="color:var(--accent);">پیش‌بینی</span>' : '')+'</div>';
+    if(!isToday) html += '<button class="today-jump" data-act="today-jump">برو به امروز</button>';
+    html += '  </div>';
+    html += '  <button class="chev" data-act="today-next">›</button>';
+    html += '</div>';
+
+    html += '<div class="card">';
+    html += '  <div class="ring-wrap">';
+    html += '    <div class="ring-svg-box">';
+    html += '      <svg width="110" height="110" viewBox="0 0 110 110">';
+    html += '        <circle cx="55" cy="55" r="'+r+'" stroke="var(--ring-track)" stroke-width="10" fill="none"/>';
+    html += '        <circle cx="55" cy="55" r="'+r+'" stroke="url(#gradToday)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+offset+'"/>';
+    html += '        <defs><linearGradient id="gradToday" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3ecf9b"/><stop offset="100%" stop-color="#f2b84b"/></linearGradient></defs>';
+    html += '      </svg>';
+    html += '      <div class="ring-center">'+faNum(pct)+'٪</div>';
+    html += '    </div>';
+    html += '    <div class="ring-stats">';
+    html += '      <div class="ring-num">'+(total? (faNum(doneCount)+' از '+faNum(total)) : '—')+'</div>';
+    html += '      <div class="ring-label">'+(total? 'کار امروز انجام شده' : 'عادتی برای این روز نیست')+'</div>';
+    html += '    </div>';
+    html += '  </div>';
+    html += '</div>';
+
+    html += '<div class="card"><h3>کارهای امروز</h3>';
+    if (!applicableHabits.length){
+      html += '<div class="empty-state"><div class="e-icon">🌙</div><div class="e-title">هنوز عادتی ثبت نشده</div><div class="dimmer">از تب «عادت‌ها» اولین عادتت رو اضافه کن</div></div>';
+    } else {
+      applicableHabits.forEach(function(h){
+        var checked = isDone(h, viewedDayISO);
+        html += '<div class="task-row">';
+        html += '  <button class="check '+(checked?'checked':'')+'" data-act="toggle" data-id="'+h.id+'">'+(checked?'✓':'')+'</button>';
+        html += '  <div class="task-info">';
+        html += '    <div class="task-name '+(checked?'checked-text':'')+'">'+escapeHtml(h.name)+'</div>';
+        if (h.goal) html += '    <div class="task-goal">🎯 '+escapeHtml(h.goal)+'</div>';
+        html += '  </div>';
+        html += '</div>';
+      });
+    }
+    html += '</div>';
+
+    html += '<div class="card"><h3>یادداشت روز</h3>';
+    html += '  <textarea class="note" id="dailyNote" placeholder="پیشرفتی که امروز داشتی رو بنویس...">'+escapeHtml(state.notes[viewedDayISO]||"")+'</textarea>';
+    html += '</div>';
+
+    el.innerHTML = html;
+
+    var noteArea = document.getElementById("dailyNote");
+    if (noteArea){
+      noteArea.addEventListener("input", function(){
+        state.notes[viewedDayISO] = noteArea.value;
+        saveState();
+      });
+    }
+  }
+
+  /* ---------- WEEK ---------- */
+  function renderWeek(){
+    var el = document.getElementById("panel-week");
+    var dates = currentWeekDates();
+    var todayIdx = dates.indexOf(todayISO());
+
+    var startJ = jalaliShort(dates[0]), endJ = jalaliShort(dates[6]);
+
+    var habitsInWeek = state.habits.filter(function(h){
+      return dates.some(function(iso){ return isApplicable(h, iso); });
+    });
+
+    var weekResults = habitsInWeek.map(function(h){
+      return { habit:h, stats: habitWeekStats(h, dates) };
+    });
+
+    var totalApplicable = 0, totalDone = 0;
+    weekResults.forEach(function(r){ totalApplicable += r.stats.applicable; totalDone += r.stats.done; });
+    var overallPct = totalApplicable ? Math.round((totalDone/totalApplicable)*100) : 0;
+
+    var withPct = weekResults.filter(function(r){ return r.stats.pct!==null; });
+    var sorted = withPct.slice().sort(function(a,b){ return b.stats.pct - a.stats.pct; });
+    var best = sorted.slice(0, Math.min(3, sorted.length)).filter(function(r){ return r.stats.pct >= 70; });
+    var worst = sorted.slice().reverse().slice(0, Math.min(3, sorted.length)).filter(function(r){ return r.stats.pct < 70; });
+
+    var html = "";
+    html += '<div class="nav-switch">';
+    html += '  <button class="chev" data-act="week-prev">‹</button>';
+    html += '  <div class="mid"><div class="big">'+startJ+' تا '+endJ+'</div><div class="small">'+(weekOffset===0? 'این هفته' : (weekOffset<0? 'هفته گذشته' : 'هفته آینده'))+'</div></div>';
+    html += '  <button class="chev" data-act="week-next">›</button>';
+    html += '</div>';
+
+    html += '<div class="card">';
+    html += '  <div class="row-between"><h3 style="margin:0;">درصد کلی هفته</h3><span class="pill '+(overallPct>=70?'good':(overallPct>=40?'accent':'bad'))+'">'+faNum(overallPct)+'٪</span></div>';
+    html += '  <div class="progress-bar"><div style="width:'+overallPct+'%;"></div></div>';
+    html += '  <div class="dimmer">'+faNum(totalDone)+' از '+faNum(totalApplicable)+' مورد در این هفته انجام شده';
+    var missedTotal = totalApplicable - totalDone;
+    if (missedTotal > 0) html += ' — '+faNum(missedTotal)+' مورد جا افتاده';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="card"><h3>جدول هفتگی عادت‌ها</h3>';
+    if (!habitsInWeek.length){
+      html += '<div class="empty-state"><div class="e-icon">▤</div><div class="e-title">برای این هفته عادتی ثبت نشده</div></div>';
+    } else {
+      html += '<div style="overflow-x:auto;"><table class="week-table"><thead><tr><th style="text-align:right;">عادت</th>';
+      WEEK_ORDER.forEach(function(dow, idx){
+        html += '<th>'+WEEKDAY_FA_SHORT[dow]+'</th>';
+      });
+      html += '<th>٪</th></tr></thead><tbody>';
+      weekResults.forEach(function(r){
+        html += '<tr><td class="week-habit-name">'+escapeHtml(r.habit.name)+'</td>';
+        dates.forEach(function(iso, idx){
+          var cellClass, symbol;
+          if (!isApplicable(r.habit, iso)){
+            cellClass = "future"; symbol = "—";
+          } else if (isFuture(iso)){
+            cellClass = isDone(r.habit, iso) ? "planned" : "upcoming";
+            symbol = isDone(r.habit, iso) ? "✓" : "·";
+          } else {
+            cellClass = isDone(r.habit, iso) ? "done" : "missed";
+            symbol = isDone(r.habit, iso) ? "✓" : "×";
+          }
+          html += '<td><div class="wcell '+cellClass+'">'+symbol+'</div></td>';
+        });
+        var pctDisplay = r.stats.pct===null ? "—" : faNum(r.stats.pct)+"٪";
+        html += '<td class="week-pct">'+pctDisplay+'</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+    html += '</div>';
+
+    html += '<div class="card"><h3>🏆 بهترین عادت‌های این هفته</h3><div class="best-worst">';
+    if (!best.length){
+      html += '<div class="dimmer">هنوز عادتی با عملکرد عالی این هفته نداری</div>';
+    } else {
+      best.forEach(function(r){
+        html += '<div class="bw-item"><div><div class="name">'+escapeHtml(r.habit.name)+'</div><div class="note">همیشه یا تقریبا همیشه انجام شده</div></div><span class="pill good">'+faNum(r.stats.pct)+'٪</span></div>';
+      });
+    }
+    html += '</div></div>';
+
+    html += '<div class="card"><h3>⚠️ عادت‌های ضعیف‌تر این هفته</h3><div class="best-worst">';
+    if (!worst.length){
+      html += '<div class="dimmer">این هفته نقطه‌ضعف خاصی ثبت نشده، عالیه!</div>';
+    } else {
+      worst.forEach(function(r){
+        var note = r.stats.missedNames.length ? ('روزهای جا افتاده: '+r.stats.missedNames.join('، ')) : 'نیاز به تمرکز بیشتر';
+        html += '<div class="bw-item"><div><div class="name">'+escapeHtml(r.habit.name)+'</div><div class="note">'+note+'</div></div><span class="pill bad">'+faNum(r.stats.pct)+'٪</span></div>';
+      });
+    }
+    html += '</div></div>';
+
+    el.innerHTML = html;
+  }
+
+  /* ---------- MONTH ---------- */
+  function renderMonth(){
+    var el = document.getElementById("panel-month");
+    var info = currentMonthInfo();
+    var j = gregorianToJalali(info.year, info.month+1, 15);
+
+    var dayCells = [];
+    var firstWeekday = info.first.getDay(); // 0..6, Saturday=6
+    var leadingBlanks = (firstWeekday - 6 + 7) % 7;
+    for (var i=0;i<leadingBlanks;i++) dayCells.push(null);
+    for (var d=1; d<=info.daysInMonth; d++){
+      dayCells.push(toISO(new Date(info.year, info.month, d)));
+    }
+
+    function dayCompletion(iso){
+      var applicable = state.habits.filter(function(h){ return isApplicable(h, iso); });
+      if (!applicable.length) return null;
+      var done = applicable.filter(function(h){ return isDone(h, iso); }).length;
+      return done/applicable.length;
+    }
+
+    var html = "";
+    html += '<div class="nav-switch">';
+    html += '  <button class="chev" data-act="month-prev">‹</button>';
+    html += '  <div class="mid"><div class="big">'+JMONTHS[j[1]-1]+' '+faNum(j[0])+'</div><div class="small">'+(monthOffset===0?'این ماه':(monthOffset<0?'ماه گذشته':'ماه آینده'))+'</div></div>';
+    html += '  <button class="chev" data-act="month-next">›</button>';
+    html += '</div>';
+
+    html += '<div class="card"><h3>نمای کلی ماه</h3><div class="month-grid">';
+    WEEKDAY_FA_SHORT.slice().map(function(x,i){return x;});
+    // header order matches WEEK_ORDER (sat..fri)
+    var headOrder = [6,0,1,2,3,4,5];
+    headOrder.forEach(function(dow){ html += '<div class="wd">'+WEEKDAY_FA_SHORT[dow]+'</div>'; });
+    dayCells.forEach(function(iso){
+      if (iso===null){ html += '<div class="mcell pad"></div>'; return; }
+      var comp = dayCompletion(iso);
+      var future = isFuture(iso);
+      var bg = "var(--surface-2)";
+      if (comp !== null){
+        if (future){
+          bg = comp > 0 ? "rgba(242,184,75,.30)" : "var(--surface-2)";
+        } else if (comp >= 0.99) bg = "var(--good)";
+        else if (comp >= 0.5) bg = "rgba(62,207,155,.45)";
+        else if (comp > 0) bg = "rgba(240,96,90,.35)";
+        else bg = "var(--bad-dim)";
+      }
+      var isToday = iso===todayISO();
+      var dnum = jalaliOf(iso).d;
+      html += '<div class="mcell '+(isToday?'today':'')+'" style="background:'+bg+';" title="'+iso+'">'+faNum(dnum)+'</div>';
+    });
+    html += '</div>';
+    html += '<div class="dimmer" style="margin-top:12px;">رنگ سبز = روزهای پرانجام، رنگ قرمز = روزهای ضعیف عملکرد</div>';
+    html += '</div>';
+
+    if (!state.habits.length){
+      html += '<div class="card"><div class="empty-state"><div class="e-icon">▦</div><div class="e-title">هنوز عادتی برای پیگیری ماهانه نداری</div></div></div>';
+    } else {
+      state.habits.forEach(function(h){
+        var st = habitStats(h);
+        var dots = "";
+        for (var day=1; day<=st.target; day++){
+          var iso = addDaysISO(h.startDate, day-1);
+          var cls = "future";
+          if (!isFuture(iso)){
+            cls = isDone(h, iso) ? "done" : "missed";
+          }
+          dots += '<div class="dot '+cls+'" title="'+jalaliShort(iso)+'"></div>';
+        }
+        html += '<div class="card">';
+        html += '  <div class="habit-card-head"><div><div class="habit-title">'+escapeHtml(h.name)+'</div>';
+        if (h.goal) html += '<div class="habit-goal">🎯 '+escapeHtml(h.goal)+'</div>';
+        html += '  </div>'+(h.goalAchieved? '<span class="pill good">هدف محقق شد</span>':'')+'</div>';
+        html += '  <div class="dotgrid">'+dots+'</div>';
+        html += '  <div class="progress-bar"><div style="width:'+st.progressPct+'%;"></div></div>';
+        html += '  <div class="habit-stats-line">';
+        html += '    <span class="pill accent">پیشرفت هدف '+faNum(st.progressPct)+'٪</span>';
+        html += '    <span class="pill '+(st.negativePct>30?'bad':'neutral')+'">افت عملکرد '+faNum(st.negativePct)+'٪</span>';
+        html += '    <span class="pill neutral">'+faNum(st.completed)+' از '+faNum(st.target)+' روز</span>';
+        html += '  </div>';
+        html += '  <div class="goal-check-row '+(h.goalAchieved?'achieved':'')+'">';
+        html += '    <button class="check '+(h.goalAchieved?'checked':'')+'" data-act="toggle-goal" data-id="'+h.id+'">'+(h.goalAchieved?'✓':'')+'</button>';
+        html += '    <label>هدف این عادت رو محقق کردم</label>';
+        html += '  </div>';
+
+        var linkedReward = h.rewardId ? state.rewards.find(function(rw){ return rw.id===h.rewardId; }) : null;
+        html += '  <div class="reward-row">';
+        html += '    <div class="reward-row-top"><span class="reward-row-label">🎁 پاداش عادت</span>'+(linkedReward && linkedReward.done ? '<span class="pill good">فعال شده</span>' : '')+'</div>';
+        if (linkedReward){
+          html += '    <div class="reward-row-text">'+escapeHtml(linkedReward.text)+'</div>';
+          var rewardDisabled = (!h.goalAchieved || linkedReward.done);
+          html += '    <button class="btn '+(linkedReward.done? 'btn-ghost':'btn-accent')+' btn-sm" data-act="activate-reward" data-id="'+linkedReward.id+'" '+(rewardDisabled?'disabled':'')+'>'+(linkedReward.done? '✓ فعال شده' : 'فعال‌سازی پاداش')+'</button>';
+        } else {
+          html += '    <div class="dimmer">برای این عادت پاداشی انتخاب نکردی — از ویرایش عادت (تب عادت‌ها) یکی انتخاب کن</div>';
+        }
+        html += '  </div>';
+        html += '</div>';
+      });
+    }
+
+    el.innerHTML = html;
+  }
+
+  /* ---------- HABITS (manage) ---------- */
+  function renderHabits(){
+    var el = document.getElementById("panel-habits");
+    var html = "";
+    html += '<button class="btn btn-accent" data-act="open-add-habit" style="margin-bottom:16px;">＋ افزودن عادت / تسک جدید</button>';
+
+    if (!state.habits.length){
+      html += '<div class="card"><div class="empty-state"><div class="e-icon">✚</div><div class="e-title">هنوز عادتی اضافه نکردی</div><div class="dimmer">مثال: باشگاه — هدف رسیدن به وزن ۶۰ کیلو، ۳۰ روز</div></div></div>';
+    } else {
+      state.habits.forEach(function(h){
+        var st = habitStats(h);
+        html += '<div class="card">';
+        html += '  <div class="habit-card-head"><div><div class="habit-title">'+escapeHtml(h.name)+'</div>';
+        if (h.goal) html += '<div class="habit-goal">🎯 '+escapeHtml(h.goal)+'</div>';
+        html += '  <div class="dimmer" style="margin-top:6px;">شروع: '+jalaliShort(h.startDate)+' — دوره: '+faNum(h.targetDays)+' روز</div>';
+        html += '  </div>'+(h.goalAchieved? '<span class="pill good">محقق شد</span>':'')+'</div>';
+        html += '  <div class="progress-bar"><div style="width:'+st.progressPct+'%;"></div></div>';
+        html += '  <div class="habit-stats-line">';
+        html += '    <span class="pill accent">پیشرفت '+faNum(st.progressPct)+'٪</span>';
+        html += '    <span class="pill '+(st.negativePct>30?'bad':'neutral')+'">افت '+faNum(st.negativePct)+'٪</span>';
+        html += '  </div>';
+        html += '  <div class="habit-actions">';
+        html += '    <button class="btn btn-ghost btn-sm" data-act="edit-habit" data-id="'+h.id+'">ویرایش</button>';
+        html += '    <button class="btn btn-danger-ghost btn-sm" data-act="delete-habit" data-id="'+h.id+'">حذف</button>';
+        html += '  </div>';
+        html += '</div>';
+      });
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---------- REWARDS ---------- */
+  function renderRewards(){
+    var el = document.getElementById("panel-rewards");
+    var html = "";
+    html += '<div class="card">';
+    html += '  <h3>پاداش خودت رو تعریف کن</h3>';
+    html += '  <div class="add-inline"><input type="text" id="newRewardInput" placeholder="مثلاً: یک وعده رستوران دلخواه"><button class="btn btn-accent btn-sm" data-act="add-reward">افزودن</button></div>';
+    if (!state.rewards.length){
+      html += '<div class="empty-state"><div class="e-icon">★</div><div class="e-title">هنوز پاداشی تعریف نشده</div><div class="dimmer">بعد از رسیدن به یک هدف، خودتو تشویق کن</div></div>';
+    } else {
+      state.rewards.forEach(function(r){
+        html += '<div class="reward-item">';
+        html += '  <button class="check '+(r.done?'checked':'')+'" data-act="toggle-reward" data-id="'+r.id+'">'+(r.done?'✓':'')+'</button>';
+        html += '  <div class="reward-text '+(r.done?'done':'')+'">'+escapeHtml(r.text)+'</div>';
+        html += '  <button class="x-btn" data-act="delete-reward" data-id="'+r.id+'">×</button>';
+        html += '</div>';
+      });
+    }
+    html += '</div>';
+    el.innerHTML = html;
+
+    var input = document.getElementById("newRewardInput");
+    if (input){
+      input.addEventListener("keydown", function(e){
+        if (e.key === "Enter"){ addReward(); }
+      });
+    }
+  }
+
+  function addReward(){
+    var input = document.getElementById("newRewardInput");
+    var val = input.value.trim();
+    if (!val) return;
+    state.rewards.push({ id: uid(), text: val, done:false });
+    saveState();
+    renderRewards();
+  }
+
+  /* ============================= Modal: Add/Edit Habit ============================= */
+  function openHabitModal(existingId){
+    var existing = existingId ? state.habits.find(function(h){ return h.id===existingId; }) : null;
+    var overlay = document.getElementById("modalOverlay");
+    var body = document.getElementById("modalBody");
+
+    var html = "";
+    html += '<h2>'+(existing? 'ویرایش عادت / تسک' : 'افزودن عادت / تسک جدید')+'</h2>';
+    html += '<div class="field"><label>نام تسک</label><input type="text" id="mHabitName" placeholder="مثلاً: باشگاه" value="'+(existing? escapeHtml(existing.name):"")+'"></div>';
+    html += '<div class="field"><label>هدف (اختیاری)</label><input type="text" id="mHabitGoal" placeholder="مثلاً: رسیدن به وزن ۶۰ کیلو" value="'+(existing? escapeHtml(existing.goal||""):"")+'"></div>';
+    html += '<div class="field"><label>مدت زمان تکرار (روز)</label><input type="number" min="1" id="mHabitTarget" value="'+(existing? existing.targetDays : 30)+'"><div class="hint">پیشنهاد می‌شود حداقل ۳۰ روز باشد، اما می‌تونی هر عددی که خودت مدنظرته وارد کنی.</div></div>';
+    html += '<div class="field"><label>پاداش این عادت</label>';
+    if (state.rewards.length){
+      html += '<select id="mHabitReward"><option value="">بدون پاداش</option>';
+      state.rewards.forEach(function(r){
+        var sel = (existing && existing.rewardId === r.id) ? "selected" : "";
+        html += '<option value="'+r.id+'" '+sel+'>'+escapeHtml(r.text)+'</option>';
+      });
+      html += '</select>';
+      html += '<div class="hint">وقتی هدف این عادت رو تیک بزنی، می‌تونی این پاداش رو از تب ماهانه فعال کنی.</div>';
+    } else {
+      html += '<div class="hint">هنوز پاداشی نساختی — اول از تب «پاداش» یکی اضافه کن، بعد اینجا انتخابش کن.</div>';
+    }
+    html += '</div>';
+    html += '<div class="modal-actions">';
+    html += '  <button class="btn btn-ghost" data-act="close-modal">انصراف</button>';
+    html += '  <button class="btn btn-accent" data-act="save-habit" data-id="'+(existing? existing.id : "")+'">ذخیره</button>';
+    html += '</div>';
+
+    body.innerHTML = html;
+    overlay.classList.remove("hidden");
+  }
+
+  function closeModal(){
+    document.getElementById("modalOverlay").classList.add("hidden");
+  }
+
+  function saveHabitFromModal(existingId){
+    var name = document.getElementById("mHabitName").value.trim();
+    var goal = document.getElementById("mHabitGoal").value.trim();
+    var target = parseInt(document.getElementById("mHabitTarget").value, 10);
+    var rewardSelect = document.getElementById("mHabitReward");
+    var rewardId = rewardSelect ? (rewardSelect.value || null) : null;
+    if (!name){ document.getElementById("mHabitName").focus(); return; }
+    if (!target || target < 1) target = 30;
+
+    if (existingId){
+      var h = state.habits.find(function(x){ return x.id===existingId; });
+      if (h){ h.name = name; h.goal = goal; h.targetDays = target; h.rewardId = rewardId; }
+    } else {
+      state.habits.push({
+        id: uid(),
+        name: name,
+        goal: goal,
+        targetDays: target,
+        startDate: todayISO(),
+        goalAchieved: false,
+        rewardId: rewardId,
+        completions: {}
+      });
+    }
+    saveState();
+    closeModal();
+    renderAll();
+  }
+
+  /* ============================= Event delegation ============================= */
+  document.addEventListener("click", function(e){
+    var act = e.target.closest("[data-act]");
+    if (!act) return;
+    var action = act.getAttribute("data-act");
+    var id = act.getAttribute("data-id");
+
+    switch(action){
+      case "toggle": {
+        var h = state.habits.find(function(x){ return x.id===id; });
+        if (h){
+          h.completions[viewedDayISO] = !h.completions[viewedDayISO];
+          if (!h.completions[viewedDayISO]) delete h.completions[viewedDayISO];
+          saveState(); renderAll();
+        }
+        break;
+      }
+      case "toggle-goal": {
+        var hb = state.habits.find(function(x){ return x.id===id; });
+        if (hb){ hb.goalAchieved = !hb.goalAchieved; saveState(); renderAll(); }
+        break;
+      }
+      case "today-prev": viewedDayISO = addDaysISO(viewedDayISO, -1); renderToday(); break;
+      case "today-next": viewedDayISO = addDaysISO(viewedDayISO, 1); renderToday(); break;
+      case "today-jump": viewedDayISO = todayISO(); renderToday(); break;
+      case "week-prev": weekOffset--; renderWeek(); break;
+      case "week-next": weekOffset++; renderWeek(); break;
+      case "month-prev": monthOffset--; renderMonth(); break;
+      case "month-next": monthOffset++; renderMonth(); break;
+      case "open-add-habit": openHabitModal(null); break;
+      case "edit-habit": openHabitModal(id); break;
+      case "delete-habit": {
+        if (confirm("این عادت و کل سابقه‌اش حذف بشه؟")){
+          state.habits = state.habits.filter(function(x){ return x.id!==id; });
+          saveState(); renderAll();
+        }
+        break;
+      }
+      case "close-modal": closeModal(); break;
+      case "save-habit": saveHabitFromModal(id || null); break;
+      case "add-reward": addReward(); break;
+      case "activate-reward": {
+        var rw = state.rewards.find(function(x){ return x.id===id; });
+        if (rw && !rw.done){ rw.done = true; saveState(); renderAll(); }
+        break;
+      }
+      case "toggle-reward": {
+        var r = state.rewards.find(function(x){ return x.id===id; });
+        if (r){ r.done = !r.done; saveState(); renderRewards(); }
+        break;
+      }
+      case "delete-reward": {
+        state.rewards = state.rewards.filter(function(x){ return x.id!==id; });
+        saveState(); renderRewards();
+        break;
+      }
+    }
+  });
+
+  document.getElementById("modalOverlay").addEventListener("click", function(e){
+    if (e.target.id === "modalOverlay") closeModal();
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    if (confirm("همه‌ی داده‌های پلنر (عادت‌ها، پاداش‌ها، یادداشت‌ها) برای همیشه پاک بشه؟")){
+      state = defaultState();
+      saveState();
+      renderAll();
+    }
+  });
+
+  /* ---------- Tabs ---------- */
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var tab = btn.getAttribute("data-tab");
+      currentTab = tab;
+      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.toggle("active", b===btn); });
+      document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
+      document.getElementById("panel-"+tab).classList.add("active");
+    });
+  });
+
+  /* ============================= Init ============================= */
+  renderAll();
+
+})();
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+</script>
+</body>
+</html>
