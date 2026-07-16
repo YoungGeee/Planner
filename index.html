@@ -291,14 +291,17 @@
     padding:0 0 max(10px, env(safe-area-inset-bottom)) 0;
   }
   .tabbar-inner{
-    display:flex; gap:4px; background:var(--surface); border:1px solid var(--border);
+    display:flex; gap:2px; background:var(--surface); border:1px solid var(--border);
     border-radius:20px; padding:6px; margin:0 16px; width:100%; max-width:730px;
     box-shadow:0 10px 30px rgba(0,0,0,.5);
+    overflow-x:auto; scrollbar-width:none;
   }
+  .tabbar-inner::-webkit-scrollbar{ display:none; }
   .tab-btn{
-    flex:1; background:none; border:none; color:var(--text-dimmer);
+    flex:1 0 auto; min-width:58px; background:none; border:none; color:var(--text-dimmer);
     display:flex; flex-direction:column; align-items:center; gap:3px;
-    padding:9px 2px; border-radius:14px; font-size:10.5px; font-weight:700; transition:.15s;
+    padding:9px 2px; border-radius:14px; font-size:9.5px; font-weight:700; transition:.15s;
+    white-space:nowrap;
   }
   .tab-btn .ic{ font-size:17px; }
   .tab-btn.active{ background:var(--surface-3); color:var(--accent); }
@@ -323,6 +326,61 @@
   .field .hint{ font-size:11px; color:var(--text-dimmer); margin-top:5px; }
   .modal-actions{ display:flex; gap:10px; margin-top:18px; }
 
+  /* ---------- Special plan (برنامه خاص) ---------- */
+  .special-item{
+    display:flex; align-items:flex-start; gap:12px;
+    padding:13px 4px; border-bottom:1px solid var(--border);
+  }
+  .special-item:last-child{ border-bottom:none; }
+  .special-info{ flex:1; min-width:0; }
+  .special-title{ font-weight:700; font-size:14.5px; }
+  .special-title.checked-text{ color:var(--text-dim); text-decoration:line-through; text-decoration-color:var(--text-dimmer); }
+  .special-date{ font-size:12px; color:var(--text-dimmer); margin-top:3px; }
+  .special-actions{ display:flex; gap:6px; margin-top:8px; }
+  .time-badge{
+    display:inline-flex; align-items:center; gap:4px; margin-top:6px;
+    padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;
+    background:var(--surface-3); color:var(--text-dim);
+  }
+  .time-badge.near{ background:var(--accent-dim); color:var(--accent); animation:pulseNear 1.4s ease-in-out infinite; }
+  .time-badge.passed{ background:var(--bad-dim); color:var(--bad); }
+  @keyframes pulseNear{ 0%,100%{ opacity:1;} 50%{ opacity:.55;} }
+  .special-item.near-highlight{ background:rgba(242,184,75,.06); border-radius:12px; }
+  .field-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .field-row input[type="checkbox"]{ width:19px; height:19px; accent-color:var(--accent); }
+  .field-row label{ font-size:13.5px; font-weight:600; color:var(--text); }
+  .field input[type="date"], .field input[type="time"]{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
+    padding:12px 14px; color:var(--text); font-size:14px; direction:ltr; text-align:left;
+  }
+  .ics-link{ font-size:12px; color:var(--accent); text-decoration:none; }
+
+  /* ---------- Account tab ---------- */
+  .account-card-head{ display:flex; align-items:center; justify-content:space-between; }
+  .sub-days-num{ font-size:32px; font-weight:900; }
+  .sub-days-num.low{ color:var(--bad); }
+  .log-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px; }
+  .log-cell{ background:var(--surface-2); border-radius:var(--radius-sm); padding:12px; text-align:center; }
+  .log-cell .num{ font-size:20px; font-weight:900; }
+  .log-cell .lbl{ font-size:11px; color:var(--text-dimmer); margin-top:4px; }
+  .logout-row{ margin-top:16px; }
+
+  /* ---------- Lock screen (subscription expired) ---------- */
+  .lock-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .lock-screen.hidden{ display:none; }
+  .lock-box{
+    width:100%; max-width:360px; text-align:center;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:30px 22px; box-shadow:var(--shadow);
+  }
+  .lock-icon{ font-size:34px; margin-bottom:10px; }
+  .lock-msg-btn{
+    width:100%; border:none; border-radius:14px; padding:14px 16px; font-weight:700; font-size:13.5px;
+    background:var(--bad-dim); color:var(--bad); margin-bottom:12px; line-height:1.9; cursor:default;
+  }
+
   @media (min-width:768px){
     .app{ padding-bottom:26px; }
     .tabbar{ position:sticky; top:0; background:none; padding:0; order:-1; }
@@ -345,7 +403,6 @@
       <div class="brand-date" id="headerDate">—</div>
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="icon-btn" id="logoutBtn" title="خروج از حساب">⏻</button>
       <button class="icon-btn" id="resetBtn" title="بازنشانی کامل داده‌ها">⟲</button>
     </div>
   </header>
@@ -355,8 +412,10 @@
       <button class="tab-btn active" data-tab="today"><span class="ic">◎</span>امروز</button>
       <button class="tab-btn" data-tab="week"><span class="ic">▤</span>هفتگی</button>
       <button class="tab-btn" data-tab="month"><span class="ic">▦</span>ماهانه</button>
-      <button class="tab-btn" data-tab="habits"><span class="ic">✚</span>عادت‌ها</button>
+      <button class="tab-btn" data-tab="habits"><span class="ic">✚</span>برنامه‌ها</button>
+      <button class="tab-btn" data-tab="special"><span class="ic">📌</span>برنامه خاص</button>
       <button class="tab-btn" data-tab="rewards"><span class="ic">★</span>پاداش</button>
+      <button class="tab-btn" data-tab="account"><span class="ic">◐</span>حساب کاربری</button>
     </div>
   </nav>
 
@@ -365,7 +424,9 @@
     <section class="tab-panel" id="panel-week"></section>
     <section class="tab-panel" id="panel-month"></section>
     <section class="tab-panel" id="panel-habits"></section>
+    <section class="tab-panel" id="panel-special"></section>
     <section class="tab-panel" id="panel-rewards"></section>
+    <section class="tab-panel" id="panel-account"></section>
   </main>
 </div>
 
@@ -385,6 +446,16 @@
   <div class="modal" id="modalBody"></div>
 </div>
 
+<div class="lock-screen hidden" id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-icon">⏳</div>
+    <button class="lock-msg-btn" disabled>اشتراک شما به پایان رسید<br>برای استفاده از برنامه، اشتراک خود را مجددا شارژ کنید</button>
+    <button class="btn btn-accent" data-act="renew-subscription">تمدید اشتراک (۳۰ روز)</button>
+    <div class="dimmer" style="margin-top:14px;">اتصال به درگاه پرداخت واقعی به‌زودی — فعلاً این دکمه به‌صورت آزمایشی اشتراک را تمدید می‌کند.</div>
+    <button class="btn btn-ghost btn-sm" style="width:auto;margin-top:16px;" data-act="logout">خروج از حساب</button>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -397,8 +468,17 @@
   var currentUser = null;
   var saveTimer = null;
 
+  var TRIAL_DAYS = 30;
+  var RENEW_DAYS = 30;
+
   function defaultState(){
-    return { habits: [], rewards: [], notes: {} };
+    return {
+      habits: [],
+      rewards: [],
+      notes: {},
+      specialPlans: [],
+      account: { subscriptionEnd: addDaysISO(todayISO(), TRIAL_DAYS) }
+    };
   }
 
   // Debounced write to Supabase — waits a bit after the last change before sending,
@@ -434,6 +514,9 @@
         if(!loaded.habits) loaded.habits = [];
         if(!loaded.rewards) loaded.rewards = [];
         if(!loaded.notes) loaded.notes = {};
+        if(!loaded.specialPlans) loaded.specialPlans = [];
+        if(!loaded.account) loaded.account = { subscriptionEnd: addDaysISO(todayISO(), TRIAL_DAYS) };
+        if(!loaded.account.subscriptionEnd) loaded.account.subscriptionEnd = addDaysISO(todayISO(), TRIAL_DAYS);
         applyState(loaded);
       });
   }
@@ -442,6 +525,8 @@
     state.habits = loaded.habits;
     state.rewards = loaded.rewards;
     state.notes = loaded.notes;
+    state.specialPlans = loaded.specialPlans;
+    state.account = loaded.account;
   }
 
   var state = defaultState();
@@ -458,8 +543,33 @@
     authScreen.classList.add("hidden");
     appRoot.classList.remove("hidden");
   }
+
+  /* ============================= Subscription ============================= */
+  function daysRemaining(){
+    if(!state.account || !state.account.subscriptionEnd) return 0;
+    return diffDaysISO(todayISO(), state.account.subscriptionEnd);
+  }
+  function isSubscriptionExpired(){
+    return daysRemaining() < 0;
+  }
+  function checkLockState(){
+    var lockScreen = document.getElementById("lockScreen");
+    var expired = isSubscriptionExpired();
+    lockScreen.classList.toggle("hidden", !expired);
+    appRoot.classList.toggle("hidden", expired);
+  }
+  function renewSubscription(){
+    // TODO: در آینده به‌جای تمدید محلی، کاربر باید به درگاه پرداخت واقعی (مثلاً زرین‌پال)
+    // هدایت بشه و بعد از تأیید پرداخت، این تاریخ سمت سرور (نه کلاینت) آپدیت بشه.
+    var base = isSubscriptionExpired() ? todayISO() : state.account.subscriptionEnd;
+    state.account.subscriptionEnd = addDaysISO(base, RENEW_DAYS);
+    saveState();
+    checkLockState();
+    renderAll();
+  }
   function showAuth(msg){
     appRoot.classList.add("hidden");
+    document.getElementById("lockScreen").classList.add("hidden");
     authScreen.classList.remove("hidden");
     authError.textContent = msg || "";
   }
@@ -497,19 +607,21 @@
     });
   });
 
-  document.getElementById("logoutBtn").addEventListener("click", function(){
+  function doLogout(){
     sb.auth.signOut().then(function(){
       currentUser = null;
       state = defaultState();
       showAuth();
     });
-  });
+  }
 
   function onAuthed(user){
     currentUser = user;
     fetchState().then(function(){
       showApp();
+      checkLockState();
       renderAll();
+      startTimeWatcher();
     });
   }
 
@@ -660,7 +772,199 @@
     renderWeek();
     renderMonth();
     renderHabits();
+    renderSpecial();
     renderRewards();
+    renderAccount();
+  }
+
+  /* ============================= Special plan (date-specific) helpers ============================= */
+  function sortedSpecialPlans(){
+    return state.specialPlans.slice().sort(function(a,b){
+      var da = a.date + (a.timeEnabled && a.time ? " "+a.time : " 00:00");
+      var db = b.date + (b.timeEnabled && b.time ? " "+b.time : " 00:00");
+      return da < db ? -1 : (da > db ? 1 : 0);
+    });
+  }
+
+  // Returns: null (no time set), "near" (within 30 min before/at target), "passed" (time already gone), "future" (more than 30 min away)
+  function planTimeStatus(plan){
+    if (!plan.timeEnabled || !plan.time || plan.date !== todayISO()) return null;
+    var now = new Date();
+    var parts = plan.time.split(":");
+    var target = new Date();
+    target.setHours(parseInt(parts[0],10), parseInt(parts[1],10), 0, 0);
+    var diffMin = (target - now) / 60000;
+    if (diffMin < -1) return "passed";
+    if (diffMin <= 30) return "near";
+    return "future";
+  }
+
+  function planTimeBadge(plan){
+    if (!plan.timeEnabled || !plan.time) return "";
+    var status = planTimeStatus(plan);
+    var cls = status === "near" ? "near" : (status === "passed" ? "passed" : "");
+    var label = plan.time.replace(":", ":");
+    var extra = status === "near" ? " ⏰ نزدیکه" : (status === "passed" ? " · گذشت" : "");
+    return '<span class="time-badge '+cls+'">🕒 '+label+extra+'</span>';
+  }
+
+  function icsDataUrl(plan){
+    var dt = plan.date.replace(/-/g,"");
+    var timePart = (plan.timeEnabled && plan.time) ? plan.time.replace(":","")+"00" : "090000";
+    var dtstamp = dt+"T"+timePart;
+    var ics = "BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:"+plan.id+"@planner\nDTSTART:"+dtstamp+"\nSUMMARY:"+plan.title.replace(/\n/g," ")+"\nEND:VEVENT\nEND:VCALENDAR";
+    return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+  }
+
+  /* ---------- SPECIAL PLANS (manage) ---------- */
+  function renderSpecial(){
+    var el = document.getElementById("panel-special");
+    var html = "";
+    html += '<button class="btn btn-accent" data-act="open-add-special" style="margin-bottom:16px;">＋ افزودن برنامه خاص</button>';
+    html += '<div class="dimmer" style="margin-bottom:14px;">اینجا می‌تونی برای یک تاریخ خاص (نه تکرارشونده) یک کار ثبت کنی؛ اختیاری می‌تونی ساعت مشخصی هم براش بذاری.</div>';
+
+    var plans = sortedSpecialPlans();
+    if (!plans.length){
+      html += '<div class="card"><div class="empty-state"><div class="e-icon">📌</div><div class="e-title">هنوز برنامه خاصی ثبت نشده</div></div></div>';
+    } else {
+      html += '<div class="card">';
+      plans.forEach(function(p){
+        var status = planTimeStatus(p);
+        html += '<div class="special-item '+(status==="near"?"near-highlight":"")+'">';
+        html += '  <button class="check '+(p.done?'checked':'')+'" data-act="toggle-special" data-id="'+p.id+'">'+(p.done?'✓':'')+'</button>';
+        html += '  <div class="special-info">';
+        html += '    <div class="special-title '+(p.done?'checked-text':'')+'">'+escapeHtml(p.title)+'</div>';
+        html += '    <div class="special-date">'+jalaliLongDate(p.date)+'</div>';
+        html += '    '+planTimeBadge(p);
+        html += '    <div class="special-actions">';
+        html += '      <button class="btn btn-ghost btn-sm" data-act="edit-special" data-id="'+p.id+'">ویرایش</button>';
+        html += '      <button class="btn btn-danger-ghost btn-sm" data-act="delete-special" data-id="'+p.id+'">حذف</button>';
+        html += '      <a class="ics-link" href="'+icsDataUrl(p)+'" download="plan-'+p.id+'.ics">افزودن به تقویم گوشی</a>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  function openSpecialModal(existingId){
+    var existing = existingId ? state.specialPlans.find(function(p){ return p.id===existingId; }) : null;
+    var overlay = document.getElementById("modalOverlay");
+    var body = document.getElementById("modalBody");
+
+    var html = "";
+    html += '<h2>'+(existing? 'ویرایش برنامه خاص' : 'افزودن برنامه خاص')+'</h2>';
+    html += '<div class="field"><label>عنوان</label><input type="text" id="mSpecialTitle" placeholder="مثلاً: ویزیت دکتر" value="'+(existing? escapeHtml(existing.title):"")+'"></div>';
+    html += '<div class="field"><label>تاریخ</label><input type="date" id="mSpecialDate" value="'+(existing? existing.date : todayISO())+'"></div>';
+    html += '<div class="field-row"><input type="checkbox" id="mSpecialTimeEnabled" '+(existing && existing.timeEnabled ? "checked":"")+'><label for="mSpecialTimeEnabled">ساعت مشخصی داره</label></div>';
+    html += '<div class="field" id="mSpecialTimeField" style="'+(existing && existing.timeEnabled ? "" : "display:none;")+'">';
+    html += '  <label>ساعت</label><input type="time" id="mSpecialTime" value="'+(existing && existing.time ? existing.time : "09:00")+'">';
+    html += '  <div class="hint">وقتی این برنامه بازه و به ساعتش نزدیک بشی، رنگش تغییر می‌کنه و در صورت اجازه، نوتیفیکیشن می‌گیری (فقط وقتی برنامه باز باشه).</div>';
+    html += '</div>';
+    html += '<div class="modal-actions">';
+    html += '  <button class="btn btn-ghost" data-act="close-modal">انصراف</button>';
+    html += '  <button class="btn btn-accent" data-act="save-special" data-id="'+(existing? existing.id : "")+'">ذخیره</button>';
+    html += '</div>';
+
+    body.innerHTML = html;
+    overlay.classList.remove("hidden");
+
+    var cb = document.getElementById("mSpecialTimeEnabled");
+    cb.addEventListener("change", function(){
+      document.getElementById("mSpecialTimeField").style.display = cb.checked ? "" : "none";
+      if (cb.checked) ensureNotifyPermission();
+    });
+  }
+
+  function saveSpecialFromModal(existingId){
+    var title = document.getElementById("mSpecialTitle").value.trim();
+    var date = document.getElementById("mSpecialDate").value;
+    var timeEnabled = document.getElementById("mSpecialTimeEnabled").checked;
+    var time = timeEnabled ? document.getElementById("mSpecialTime").value : null;
+    if (!title){ document.getElementById("mSpecialTitle").focus(); return; }
+    if (!date){ document.getElementById("mSpecialDate").focus(); return; }
+
+    if (existingId){
+      var p = state.specialPlans.find(function(x){ return x.id===existingId; });
+      if (p){ p.title = title; p.date = date; p.timeEnabled = timeEnabled; p.time = time; }
+    } else {
+      state.specialPlans.push({
+        id: uid(), title: title, date: date, timeEnabled: timeEnabled, time: time,
+        done: false, notifiedAt: null
+      });
+    }
+    saveState();
+    closeModal();
+    renderAll();
+  }
+
+  /* ============================= Notification watcher (only while app is open) ============================= */
+  var notifiedIds = {};
+  function ensureNotifyPermission(){
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default"){
+      Notification.requestPermission();
+    }
+  }
+  function startTimeWatcher(){
+    setInterval(function(){
+      var needsRerender = false;
+      state.specialPlans.forEach(function(p){
+        if (p.done) return;
+        var status = planTimeStatus(p);
+        if (status === "near" && !notifiedIds[p.id]){
+          notifiedIds[p.id] = true;
+          needsRerender = true;
+          if ("Notification" in window && Notification.permission === "granted"){
+            try { new Notification("یادآوری برنامه", { body: p.title + " — ساعت " + p.time }); } catch(e){}
+          }
+        }
+      });
+      if (currentTab === "special" || currentTab === "today") needsRerender = true;
+      if (needsRerender) { renderSpecial(); if (currentTab === "today") renderToday(); }
+    }, 20000);
+  }
+
+  /* ============================= Account tab ============================= */
+  function renderAccount(){
+    var el = document.getElementById("panel-account");
+    var days = daysRemaining();
+    var goalsAchieved = state.habits.filter(function(h){ return h.goalAchieved; }).length;
+    var totalDone = 0, totalMissed = 0;
+    state.habits.forEach(function(h){
+      var st = habitStats(h);
+      totalDone += st.completed;
+      totalMissed += st.missed;
+    });
+    var specialDone = state.specialPlans.filter(function(p){ return p.done; }).length;
+    var specialNotDone = state.specialPlans.filter(function(p){ return !p.done; }).length;
+
+    var html = "";
+    html += '<div class="card">';
+    html += '  <div class="account-card-head"><h3 style="margin:0;">اشتراک</h3></div>';
+    html += '  <div class="sub-days-num '+(days<=5?'low':'')+'">'+faNum(Math.max(days,0))+' <span style="font-size:14px;font-weight:700;color:var(--text-dim);">روز باقی‌مانده</span></div>';
+    html += '  <div class="dimmer" style="margin-top:6px;">تاریخ پایان اشتراک: '+jalaliLongDate(state.account.subscriptionEnd)+'</div>';
+    html += '  <button class="btn btn-accent" style="margin-top:14px;" data-act="renew-subscription">تمدید اشتراک (۳۰ روز)</button>';
+    html += '  <div class="dimmer" style="margin-top:8px;">اتصال به درگاه پرداخت واقعی به‌زودی اضافه می‌شود.</div>';
+    html += '</div>';
+
+    html += '<div class="card"><h3>لاگ کلی</h3>';
+    html += '  <div class="log-grid">';
+    html += '    <div class="log-cell"><div class="num">'+faNum(goalsAchieved)+'</div><div class="lbl">اهداف محقق‌شده</div></div>';
+    html += '    <div class="log-cell"><div class="num">'+faNum(totalDone)+'</div><div class="lbl">برنامه‌های انجام‌شده</div></div>';
+    html += '    <div class="log-cell"><div class="num">'+faNum(totalMissed)+'</div><div class="lbl">برنامه‌های انجام‌نشده</div></div>';
+    html += '    <div class="log-cell"><div class="num">'+faNum(specialDone)+'</div><div class="lbl">برنامه‌های خاص انجام‌شده</div></div>';
+    html += '  </div>';
+    html += '  <div class="dimmer" style="margin-top:10px;">'+faNum(specialNotDone)+' برنامه خاص هنوز انجام نشده</div>';
+    html += '</div>';
+
+    html += '<div class="card logout-row">';
+    html += '  <button class="btn btn-ghost" data-act="logout">خروج از حساب</button>';
+    html += '</div>';
+
+    el.innerHTML = html;
   }
 
   /* ---------- TODAY ---------- */
@@ -698,14 +1002,14 @@
     html += '    </div>';
     html += '    <div class="ring-stats">';
     html += '      <div class="ring-num">'+(total? (faNum(doneCount)+' از '+faNum(total)) : '—')+'</div>';
-    html += '      <div class="ring-label">'+(total? 'کار امروز انجام شده' : 'عادتی برای این روز نیست')+'</div>';
+    html += '      <div class="ring-label">'+(total? 'کار امروز انجام شده' : 'برنامه‌ای برای این روز نیست')+'</div>';
     html += '    </div>';
     html += '  </div>';
     html += '</div>';
 
     html += '<div class="card"><h3>کارهای امروز</h3>';
     if (!applicableHabits.length){
-      html += '<div class="empty-state"><div class="e-icon">🌙</div><div class="e-title">هنوز عادتی ثبت نشده</div><div class="dimmer">از تب «عادت‌ها» اولین عادتت رو اضافه کن</div></div>';
+      html += '<div class="empty-state"><div class="e-icon">🌙</div><div class="e-title">هنوز برنامه‌ای ثبت نشده</div><div class="dimmer">از تب «برنامه‌ها» اولین برنامه‌ات رو اضافه کن</div></div>';
     } else {
       applicableHabits.forEach(function(h){
         var checked = isDone(h, viewedDayISO);
@@ -719,6 +1023,22 @@
       });
     }
     html += '</div>';
+
+    var dayPlans = state.specialPlans.filter(function(p){ return p.date === viewedDayISO; });
+    if (dayPlans.length){
+      html += '<div class="card"><h3>📌 برنامه خاص این روز</h3>';
+      dayPlans.forEach(function(p){
+        var status = planTimeStatus(p);
+        html += '<div class="special-item '+(status==="near"?"near-highlight":"")+'">';
+        html += '  <button class="check '+(p.done?'checked':'')+'" data-act="toggle-special" data-id="'+p.id+'">'+(p.done?'✓':'')+'</button>';
+        html += '  <div class="special-info">';
+        html += '    <div class="special-title '+(p.done?'checked-text':'')+'">'+escapeHtml(p.title)+'</div>';
+        html += '    '+planTimeBadge(p);
+        html += '  </div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
 
     html += '<div class="card"><h3>یادداشت روز</h3>';
     html += '  <textarea class="note" id="dailyNote" placeholder="پیشرفتی که امروز داشتی رو بنویس...">'+escapeHtml(state.notes[viewedDayISO]||"")+'</textarea>';
@@ -776,11 +1096,11 @@
     html += '</div>';
     html += '</div>';
 
-    html += '<div class="card"><h3>جدول هفتگی عادت‌ها</h3>';
+    html += '<div class="card"><h3>جدول هفتگی برنامه‌ها</h3>';
     if (!habitsInWeek.length){
-      html += '<div class="empty-state"><div class="e-icon">▤</div><div class="e-title">برای این هفته عادتی ثبت نشده</div></div>';
+      html += '<div class="empty-state"><div class="e-icon">▤</div><div class="e-title">برای این هفته برنامه‌ای ثبت نشده</div></div>';
     } else {
-      html += '<div style="overflow-x:auto;"><table class="week-table"><thead><tr><th style="text-align:right;">عادت</th>';
+      html += '<div style="overflow-x:auto;"><table class="week-table"><thead><tr><th style="text-align:right;">برنامه</th>';
       WEEK_ORDER.forEach(function(dow, idx){
         html += '<th>'+WEEKDAY_FA_SHORT[dow]+'</th>';
       });
@@ -807,9 +1127,9 @@
     }
     html += '</div>';
 
-    html += '<div class="card"><h3>🏆 بهترین عادت‌های این هفته</h3><div class="best-worst">';
+    html += '<div class="card"><h3>🏆 بهترین برنامه‌های این هفته</h3><div class="best-worst">';
     if (!best.length){
-      html += '<div class="dimmer">هنوز عادتی با عملکرد عالی این هفته نداری</div>';
+      html += '<div class="dimmer">هنوز برنامه‌ای با عملکرد عالی این هفته نداری</div>';
     } else {
       best.forEach(function(r){
         html += '<div class="bw-item"><div><div class="name">'+escapeHtml(r.habit.name)+'</div><div class="note">همیشه یا تقریبا همیشه انجام شده</div></div><span class="pill good">'+faNum(r.stats.pct)+'٪</span></div>';
@@ -817,7 +1137,7 @@
     }
     html += '</div></div>';
 
-    html += '<div class="card"><h3>⚠️ عادت‌های ضعیف‌تر این هفته</h3><div class="best-worst">';
+    html += '<div class="card"><h3>⚠️ برنامه‌های ضعیف‌تر این هفته</h3><div class="best-worst">';
     if (!worst.length){
       html += '<div class="dimmer">این هفته نقطه‌ضعف خاصی ثبت نشده، عالیه!</div>';
     } else {
@@ -886,7 +1206,7 @@
     html += '</div>';
 
     if (!state.habits.length){
-      html += '<div class="card"><div class="empty-state"><div class="e-icon">▦</div><div class="e-title">هنوز عادتی برای پیگیری ماهانه نداری</div></div></div>';
+      html += '<div class="card"><div class="empty-state"><div class="e-icon">▦</div><div class="e-title">هنوز برنامه‌ای برای پیگیری ماهانه نداری</div></div></div>';
     } else {
       state.habits.forEach(function(h){
         var st = habitStats(h);
@@ -912,18 +1232,18 @@
         html += '  </div>';
         html += '  <div class="goal-check-row '+(h.goalAchieved?'achieved':'')+'">';
         html += '    <button class="check '+(h.goalAchieved?'checked':'')+'" data-act="toggle-goal" data-id="'+h.id+'">'+(h.goalAchieved?'✓':'')+'</button>';
-        html += '    <label>هدف این عادت رو محقق کردم</label>';
+        html += '    <label>هدف این برنامه رو محقق کردم</label>';
         html += '  </div>';
 
         var linkedReward = h.rewardId ? state.rewards.find(function(rw){ return rw.id===h.rewardId; }) : null;
         html += '  <div class="reward-row">';
-        html += '    <div class="reward-row-top"><span class="reward-row-label">🎁 پاداش عادت</span>'+(linkedReward && linkedReward.done ? '<span class="pill good">فعال شده</span>' : '')+'</div>';
+        html += '    <div class="reward-row-top"><span class="reward-row-label">🎁 پاداش برنامه</span>'+(linkedReward && linkedReward.done ? '<span class="pill good">فعال شده</span>' : '')+'</div>';
         if (linkedReward){
           html += '    <div class="reward-row-text">'+escapeHtml(linkedReward.text)+'</div>';
           var rewardDisabled = (!h.goalAchieved || linkedReward.done);
           html += '    <button class="btn '+(linkedReward.done? 'btn-ghost':'btn-accent')+' btn-sm" data-act="activate-reward" data-id="'+linkedReward.id+'" '+(rewardDisabled?'disabled':'')+'>'+(linkedReward.done? '✓ فعال شده' : 'فعال‌سازی پاداش')+'</button>';
         } else {
-          html += '    <div class="dimmer">برای این عادت پاداشی انتخاب نکردی — از ویرایش عادت (تب عادت‌ها) یکی انتخاب کن</div>';
+          html += '    <div class="dimmer">برای این برنامه پاداشی انتخاب نکردی — از ویرایش برنامه (تب برنامه‌ها) یکی انتخاب کن</div>';
         }
         html += '  </div>';
         html += '</div>';
@@ -937,10 +1257,10 @@
   function renderHabits(){
     var el = document.getElementById("panel-habits");
     var html = "";
-    html += '<button class="btn btn-accent" data-act="open-add-habit" style="margin-bottom:16px;">＋ افزودن عادت / تسک جدید</button>';
+    html += '<button class="btn btn-accent" data-act="open-add-habit" style="margin-bottom:16px;">＋ افزودن برنامه جدید</button>';
 
     if (!state.habits.length){
-      html += '<div class="card"><div class="empty-state"><div class="e-icon">✚</div><div class="e-title">هنوز عادتی اضافه نکردی</div><div class="dimmer">مثال: باشگاه — هدف رسیدن به وزن ۶۰ کیلو، ۳۰ روز</div></div></div>';
+      html += '<div class="card"><div class="empty-state"><div class="e-icon">✚</div><div class="e-title">هنوز برنامه‌ای اضافه نکردی</div><div class="dimmer">مثال: باشگاه — هدف رسیدن به وزن ۶۰ کیلو، ۳۰ روز</div></div></div>';
     } else {
       state.habits.forEach(function(h){
         var st = habitStats(h);
@@ -1009,11 +1329,11 @@
     var body = document.getElementById("modalBody");
 
     var html = "";
-    html += '<h2>'+(existing? 'ویرایش عادت / تسک' : 'افزودن عادت / تسک جدید')+'</h2>';
+    html += '<h2>'+(existing? 'ویرایش برنامه' : 'افزودن برنامه جدید')+'</h2>';
     html += '<div class="field"><label>نام تسک</label><input type="text" id="mHabitName" placeholder="مثلاً: باشگاه" value="'+(existing? escapeHtml(existing.name):"")+'"></div>';
     html += '<div class="field"><label>هدف (اختیاری)</label><input type="text" id="mHabitGoal" placeholder="مثلاً: رسیدن به وزن ۶۰ کیلو" value="'+(existing? escapeHtml(existing.goal||""):"")+'"></div>';
     html += '<div class="field"><label>مدت زمان تکرار (روز)</label><input type="number" min="1" id="mHabitTarget" value="'+(existing? existing.targetDays : 30)+'"><div class="hint">پیشنهاد می‌شود حداقل ۳۰ روز باشد، اما می‌تونی هر عددی که خودت مدنظرته وارد کنی.</div></div>';
-    html += '<div class="field"><label>پاداش این عادت</label>';
+    html += '<div class="field"><label>پاداش این برنامه</label>';
     if (state.rewards.length){
       html += '<select id="mHabitReward"><option value="">بدون پاداش</option>';
       state.rewards.forEach(function(r){
@@ -1021,7 +1341,7 @@
         html += '<option value="'+r.id+'" '+sel+'>'+escapeHtml(r.text)+'</option>';
       });
       html += '</select>';
-      html += '<div class="hint">وقتی هدف این عادت رو تیک بزنی، می‌تونی این پاداش رو از تب ماهانه فعال کنی.</div>';
+      html += '<div class="hint">وقتی هدف این برنامه رو تیک بزنی، می‌تونی این پاداش رو از تب ماهانه فعال کنی.</div>';
     } else {
       html += '<div class="hint">هنوز پاداشی نساختی — اول از تب «پاداش» یکی اضافه کن، بعد اینجا انتخابش کن.</div>';
     }
@@ -1100,7 +1420,7 @@
       case "open-add-habit": openHabitModal(null); break;
       case "edit-habit": openHabitModal(id); break;
       case "delete-habit": {
-        if (confirm("این عادت و کل سابقه‌اش حذف بشه؟")){
+        if (confirm("این برنامه و کل سابقه‌اش حذف بشه؟")){
           state.habits = state.habits.filter(function(x){ return x.id!==id; });
           saveState(); renderAll();
         }
@@ -1124,6 +1444,23 @@
         saveState(); renderRewards();
         break;
       }
+      case "open-add-special": openSpecialModal(null); break;
+      case "edit-special": openSpecialModal(id); break;
+      case "save-special": saveSpecialFromModal(id || null); break;
+      case "delete-special": {
+        if (confirm("این برنامه خاص حذف بشه؟")){
+          state.specialPlans = state.specialPlans.filter(function(x){ return x.id!==id; });
+          saveState(); renderAll();
+        }
+        break;
+      }
+      case "toggle-special": {
+        var sp = state.specialPlans.find(function(x){ return x.id===id; });
+        if (sp){ sp.done = !sp.done; saveState(); renderAll(); }
+        break;
+      }
+      case "renew-subscription": renewSubscription(); break;
+      case "logout": doLogout(); break;
     }
   });
 
@@ -1132,9 +1469,10 @@
   });
 
   document.getElementById("resetBtn").addEventListener("click", function(){
-    if (confirm("همه‌ی داده‌های پلنر (عادت‌ها، پاداش‌ها، یادداشت‌ها) برای همیشه پاک بشه؟")){
+    if (confirm("همه‌ی داده‌های پلنر (برنامه‌ها، برنامه‌های خاص، پاداش‌ها، یادداشت‌ها) برای همیشه پاک بشه؟")){
       state = defaultState();
       saveState();
+      checkLockState();
       renderAll();
     }
   });
