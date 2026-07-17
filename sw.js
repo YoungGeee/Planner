@@ -1,4 +1,4 @@
-const CACHE = "planner-cache-v2"; // هر بار که تغییر مهمی دادید این عدد رو یکی زیاد کنید
+const CACHE = "planner-cache-v3"; // هر بار که تغییر مهمی دادید این عدد رو یکی زیاد کنید
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {

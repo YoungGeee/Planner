@@ -244,6 +244,24 @@
   }
   .mcell.pad{ background:transparent; border:none; }
   .mcell.today{ box-shadow:0 0 0 2px var(--accent) inset; }
+  .mcell[data-act="view-day-special"]{ cursor:pointer; }
+  .mcell-dot{
+    position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
+    width:5px; height:5px; border-radius:50%; background:var(--accent);
+  }
+  .week-day-strip{ display:flex; gap:6px; margin-top:10px; }
+  .wds-cell{
+    flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:8px 2px;
+    font-size:11px; color:var(--text-dim); position:relative;
+  }
+  .wds-cell.today{ box-shadow:0 0 0 2px var(--accent) inset; }
+  .wds-cell[data-act="view-day-special"]{ cursor:pointer; }
+  .wds-cell .wds-dot{ width:5px; height:5px; border-radius:50%; background:var(--accent); }
+  .day-special-item{ padding:10px 4px; border-bottom:1px solid var(--border); }
+  .day-special-item:last-child{ border-bottom:none; }
+  .day-special-item .t{ font-weight:700; font-size:14px; }
+  .day-special-item .m{ font-size:12px; color:var(--text-dim); margin-top:3px; }
 
   .dotgrid{ display:flex; flex-wrap:wrap; gap:5px; margin:10px 0 4px; }
   .dot{ width:11px; height:11px; border-radius:3px; background:var(--surface-3); }
@@ -353,7 +371,6 @@
     width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
     padding:12px 14px; color:var(--text); font-size:14px; direction:ltr; text-align:left;
   }
-  .ics-link{ font-size:12px; color:var(--accent); text-decoration:none; }
 
   /* ---------- Account tab ---------- */
   .account-card-head{ display:flex; align-items:center; justify-content:space-between; }
@@ -403,6 +420,7 @@
       <div class="brand-date" id="headerDate">—</div>
     </div>
     <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="accountBtn" data-act="open-account" title="حساب کاربری">◐</button>
       <button class="icon-btn" id="resetBtn" title="بازنشانی کامل داده‌ها">⟲</button>
     </div>
   </header>
@@ -415,7 +433,6 @@
       <button class="tab-btn" data-tab="habits"><span class="ic">✚</span>برنامه‌ها</button>
       <button class="tab-btn" data-tab="special"><span class="ic">📌</span>برنامه خاص</button>
       <button class="tab-btn" data-tab="rewards"><span class="ic">★</span>پاداش</button>
-      <button class="tab-btn" data-tab="account"><span class="ic">◐</span>حساب کاربری</button>
     </div>
   </nav>
 
@@ -434,11 +451,10 @@
   <div class="auth-box">
     <div class="brand-title" style="margin-bottom:4px;">پلنر شخصی</div>
     <div class="auth-sub" id="authSub">برای استفاده وارد حساب خودت شو</div>
-    <input type="email" id="authEmail" placeholder="ایمیل" autocomplete="email">
+    <input type="text" id="authUsername" placeholder="نام کاربری" autocomplete="username">
     <input type="password" id="authPassword" placeholder="رمز عبور" autocomplete="current-password">
     <div class="auth-error" id="authError"></div>
     <button class="auth-btn primary" id="loginBtn">ورود</button>
-    <button class="auth-btn" id="signupBtn">ساخت حساب جدید</button>
   </div>
 </div>
 
@@ -466,10 +482,9 @@
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   var TABLE = "planner_data";
   var currentUser = null;
-  var saveTimer = null;
 
-  var TRIAL_DAYS = 30;
-  var RENEW_DAYS = 30;
+  var TRIAL_DAYS = 36500; // ~100 years — accounts are limited to the pre-created admins, so "unlimited" in practice
+  var RENEW_DAYS = 36500;
 
   function defaultState(){
     return {
@@ -481,21 +496,32 @@
     };
   }
 
-  // Debounced write to Supabase — waits a bit after the last change before sending,
-  // so typing in the note textarea doesn't fire a network request per keystroke.
-  function saveState(){
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function(){
-      if(!currentUser) return;
-      sb.from(TABLE).upsert({
-        user_id: currentUser.id,
-        data: state,
-        updated_at: new Date().toISOString()
-      }).then(function(res){
-        if(res.error) console.error("save error", res.error);
-      });
-    }, 500);
+  // Writes the whole state to Supabase right away. Used for every structural change
+  // (add/edit/delete/toggle) so that refreshing immediately after an action can never
+  // race ahead of the save (this was the cause of edits/deletes "coming back" on refresh).
+  function doSave(){
+    if(!currentUser) return null;
+    return sb.from(TABLE).upsert({
+      user_id: currentUser.id,
+      data: state,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "user_id" }).then(function(res){
+      if(res.error) console.error("save error", res.error);
+    });
   }
+  function saveState(){
+    doSave();
+  }
+  // Debounced save — only for the note textarea, so typing doesn't fire a network
+  // request per keystroke. Flushed immediately on page unload as a safety net.
+  var noteSaveTimer = null;
+  function saveNoteDebounced(){
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(function(){ noteSaveTimer = null; doSave(); }, 500);
+  }
+  window.addEventListener("beforeunload", function(){
+    if (noteSaveTimer){ clearTimeout(noteSaveTimer); noteSaveTimer = null; doSave(); }
+  });
 
   // Loads (or creates) this user's row from Supabase and populates the existing
   // `state` object in place, so every closure that already captured `state` still
@@ -534,7 +560,7 @@
   /* ============================= Auth ============================= */
   var authScreen = document.getElementById("authScreen");
   var appRoot = document.getElementById("appRoot");
-  var authEmail = document.getElementById("authEmail");
+  var authUsername = document.getElementById("authUsername");
   var authPassword = document.getElementById("authPassword");
   var authError = document.getElementById("authError");
   var authSub = document.getElementById("authSub");
@@ -575,35 +601,28 @@
   }
   function setAuthBusy(busy){
     document.getElementById("loginBtn").disabled = busy;
-    document.getElementById("signupBtn").disabled = busy;
     authSub.textContent = busy ? "در حال ارتباط..." : "برای استفاده وارد حساب خودت شو";
   }
 
+  // Usernames aren't a native Supabase Auth concept, so we keep a small public-readable
+  // mapping table (admin_usernames: username -> email) and sign in with the email behind
+  // the scenes. There is no sign-up flow — only the pre-created admin accounts can log in.
   document.getElementById("loginBtn").addEventListener("click", function(){
-    var email = authEmail.value.trim(), pass = authPassword.value;
-    if(!email || !pass){ authError.textContent = "ایمیل و رمز عبور رو وارد کن"; return; }
+    var username = authUsername.value.trim(), pass = authPassword.value;
+    if(!username || !pass){ authError.textContent = "نام کاربری و رمز عبور رو وارد کن"; return; }
     setAuthBusy(true);
-    sb.auth.signInWithPassword({ email: email, password: pass }).then(function(res){
-      setAuthBusy(false);
-      if(res.error){ authError.textContent = "ورود ناموفق: " + res.error.message; return; }
-      onAuthed(res.data.user);
-    });
-  });
-
-  document.getElementById("signupBtn").addEventListener("click", function(){
-    var email = authEmail.value.trim(), pass = authPassword.value;
-    if(!email || !pass){ authError.textContent = "ایمیل و رمز عبور رو وارد کن"; return; }
-    if(pass.length < 6){ authError.textContent = "رمز عبور باید حداقل ۶ کاراکتر باشه"; return; }
-    setAuthBusy(true);
-    sb.auth.signUp({ email: email, password: pass }).then(function(res){
-      setAuthBusy(false);
-      if(res.error){ authError.textContent = "ثبت‌نام ناموفق: " + res.error.message; return; }
-      if(res.data.session){
-        onAuthed(res.data.user);
-      } else {
-        authError.textContent = "";
-        authSub.textContent = "حساب ساخته شد. ایمیلت رو برای تأیید چک کن، بعد وارد شو.";
+    authError.textContent = "";
+    sb.from("admin_usernames").select("email").eq("username", username).maybeSingle().then(function(res){
+      if(res.error || !res.data){
+        setAuthBusy(false);
+        authError.textContent = "نام کاربری یا رمز عبور اشتباه است";
+        return;
       }
+      sb.auth.signInWithPassword({ email: res.data.email, password: pass }).then(function(r){
+        setAuthBusy(false);
+        if(r.error){ authError.textContent = "نام کاربری یا رمز عبور اشتباه است"; return; }
+        onAuthed(r.data.user);
+      });
     });
   });
 
@@ -670,6 +689,49 @@
     var jm = (days < 186) ? 1 + parseInt(days/31,10) : 7 + parseInt((days-186)/30,10);
     var jd = 1 + ((days < 186) ? (days % 31) : ((days-186) % 30));
     return [jy, jm, jd];
+  }
+  /* Jalali -> Gregorian conversion (inverse of the above, standard public-domain algorithm) */
+  function jalaliToGregorian(jy, jm, jd){
+    jy = parseInt(jy,10); jm = parseInt(jm,10); jd = parseInt(jd,10);
+    var gy;
+    jy += 1595;
+    var days = -355668 + (365*jy) + (parseInt(jy/33,10)*8) + parseInt(((jy%33)+3)/4,10) + jd + ((jm<7) ? (jm-1)*31 : ((jm-7)*30)+186);
+    gy = 400 * parseInt(days/146097,10);
+    days %= 146097;
+    if (days > 36524){
+      gy += 100 * parseInt(--days/36524,10);
+      days %= 36524;
+      if (days >= 365) days++;
+    }
+    gy += 4 * parseInt(days/1461,10);
+    days %= 1461;
+    if (days > 365){
+      gy += parseInt((days-1)/365,10);
+      days = (days-1) % 365;
+    }
+    var gd = days + 1;
+    var sal_a = [0,31,(((gy%4===0)&&(gy%100!==0))||(gy%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
+    var gm;
+    for (gm=1; gm<=12; gm++){
+      if (gd <= sal_a[gm]) break;
+      gd -= sal_a[gm];
+    }
+    return [gy, gm, gd];
+  }
+  function isLeapJalaliYear(jy){
+    var breaks = [1,5,9,13,17,22,26,30];
+    var r = ((jy % 33) + 33) % 33;
+    for (var i=0;i<breaks.length;i++){ if (r === breaks[i]) return true; }
+    return false;
+  }
+  function jalaliMonthLength(jy, jm){
+    if (jm <= 6) return 31;
+    if (jm <= 11) return 30;
+    return isLeapJalaliYear(jy) ? 30 : 29;
+  }
+  function jalaliToISO(jy, jm, jd){
+    var g = jalaliToGregorian(jy, jm, jd);
+    return toISO(new Date(g[0], g[1]-1, g[2]));
   }
   var JMONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
   var FA_DIGITS = ["۰","۱","۲","۳","۴","۵","۶","۷","۸","۹"];
@@ -754,13 +816,15 @@
     return dates;
   }
 
-  function currentMonthInfo(){
-    var base = new Date();
-    base.setMonth(base.getMonth() + monthOffset, 1);
-    var year = base.getFullYear(), month = base.getMonth();
-    var first = new Date(year, month, 1);
-    var last = new Date(year, month+1, 0);
-    return { year:year, month:month, first:first, last:last, daysInMonth:last.getDate() };
+  function currentJalaliMonthInfo(){
+    var j = jalaliOf(todayISO());
+    var totalMonths = (j.y*12 + (j.m-1)) + monthOffset;
+    var jy = Math.floor(totalMonths/12);
+    var jm = (((totalMonths%12)+12)%12) + 1;
+    var daysInMonth = jalaliMonthLength(jy, jm);
+    var firstISO = jalaliToISO(jy, jm, 1);
+    var firstWeekday = isoToDate(firstISO).getDay(); // 0..6, Saturday=6
+    return { jy:jy, jm:jm, daysInMonth:daysInMonth, firstISO:firstISO, firstWeekday:firstWeekday };
   }
 
   /* ============================= Rendering ============================= */
@@ -808,14 +872,6 @@
     return '<span class="time-badge '+cls+'">🕒 '+label+extra+'</span>';
   }
 
-  function icsDataUrl(plan){
-    var dt = plan.date.replace(/-/g,"");
-    var timePart = (plan.timeEnabled && plan.time) ? plan.time.replace(":","")+"00" : "090000";
-    var dtstamp = dt+"T"+timePart;
-    var ics = "BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:"+plan.id+"@planner\nDTSTART:"+dtstamp+"\nSUMMARY:"+plan.title.replace(/\n/g," ")+"\nEND:VEVENT\nEND:VCALENDAR";
-    return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
-  }
-
   /* ---------- SPECIAL PLANS (manage) ---------- */
   function renderSpecial(){
     var el = document.getElementById("panel-special");
@@ -839,7 +895,6 @@
         html += '    <div class="special-actions">';
         html += '      <button class="btn btn-ghost btn-sm" data-act="edit-special" data-id="'+p.id+'">ویرایش</button>';
         html += '      <button class="btn btn-danger-ghost btn-sm" data-act="delete-special" data-id="'+p.id+'">حذف</button>';
-        html += '      <a class="ics-link" href="'+icsDataUrl(p)+'" download="plan-'+p.id+'.ics">افزودن به تقویم گوشی</a>';
         html += '    </div>';
         html += '  </div>';
         html += '</div>';
@@ -849,15 +904,38 @@
     el.innerHTML = html;
   }
 
+  function jalaliDayOptionsHtml(selectedDay, maxDay){
+    var html = "";
+    for (var d=1; d<=maxDay; d++){
+      html += '<option value="'+d+'" '+(d===selectedDay?"selected":"")+'>'+faNum(d)+'</option>';
+    }
+    return html;
+  }
+  function jalaliMonthOptionsHtml(selectedMonth){
+    var html = "";
+    JMONTHS.forEach(function(name, idx){
+      var m = idx+1;
+      html += '<option value="'+m+'" '+(m===selectedMonth?"selected":"")+'>'+name+'</option>';
+    });
+    return html;
+  }
+
   function openSpecialModal(existingId){
     var existing = existingId ? state.specialPlans.find(function(p){ return p.id===existingId; }) : null;
     var overlay = document.getElementById("modalOverlay");
     var body = document.getElementById("modalBody");
+    var baseJ = existing ? jalaliOf(existing.date) : jalaliOf(todayISO());
 
     var html = "";
     html += '<h2>'+(existing? 'ویرایش برنامه خاص' : 'افزودن برنامه خاص')+'</h2>';
     html += '<div class="field"><label>عنوان</label><input type="text" id="mSpecialTitle" placeholder="مثلاً: ویزیت دکتر" value="'+(existing? escapeHtml(existing.title):"")+'"></div>';
-    html += '<div class="field"><label>تاریخ</label><input type="date" id="mSpecialDate" value="'+(existing? existing.date : todayISO())+'"></div>';
+    html += '<div class="field"><label>تاریخ (شمسی)</label>';
+    html += '  <div style="display:flex;gap:8px;">';
+    html += '    <select id="mSpecialDay" style="flex:.8;">'+jalaliDayOptionsHtml(baseJ.d, jalaliMonthLength(baseJ.y, baseJ.m))+'</select>';
+    html += '    <select id="mSpecialMonth" style="flex:1.6;">'+jalaliMonthOptionsHtml(baseJ.m)+'</select>';
+    html += '    <input type="number" id="mSpecialYear" style="flex:1;" value="'+baseJ.y+'">';
+    html += '  </div>';
+    html += '</div>';
     html += '<div class="field-row"><input type="checkbox" id="mSpecialTimeEnabled" '+(existing && existing.timeEnabled ? "checked":"")+'><label for="mSpecialTimeEnabled">ساعت مشخصی داره</label></div>';
     html += '<div class="field" id="mSpecialTimeField" style="'+(existing && existing.timeEnabled ? "" : "display:none;")+'">';
     html += '  <label>ساعت</label><input type="time" id="mSpecialTime" value="'+(existing && existing.time ? existing.time : "09:00")+'">';
@@ -876,15 +954,30 @@
       document.getElementById("mSpecialTimeField").style.display = cb.checked ? "" : "none";
       if (cb.checked) ensureNotifyPermission();
     });
+
+    function refreshDayOptions(){
+      var m = parseInt(document.getElementById("mSpecialMonth").value, 10);
+      var y = parseInt(document.getElementById("mSpecialYear").value, 10) || baseJ.y;
+      var daySelect = document.getElementById("mSpecialDay");
+      var currentDay = parseInt(daySelect.value, 10) || 1;
+      var maxDay = jalaliMonthLength(y, m);
+      if (currentDay > maxDay) currentDay = maxDay;
+      daySelect.innerHTML = jalaliDayOptionsHtml(currentDay, maxDay);
+    }
+    document.getElementById("mSpecialMonth").addEventListener("change", refreshDayOptions);
+    document.getElementById("mSpecialYear").addEventListener("change", refreshDayOptions);
   }
 
   function saveSpecialFromModal(existingId){
     var title = document.getElementById("mSpecialTitle").value.trim();
-    var date = document.getElementById("mSpecialDate").value;
+    var day = parseInt(document.getElementById("mSpecialDay").value, 10);
+    var month = parseInt(document.getElementById("mSpecialMonth").value, 10);
+    var year = parseInt(document.getElementById("mSpecialYear").value, 10);
     var timeEnabled = document.getElementById("mSpecialTimeEnabled").checked;
     var time = timeEnabled ? document.getElementById("mSpecialTime").value : null;
     if (!title){ document.getElementById("mSpecialTitle").focus(); return; }
-    if (!date){ document.getElementById("mSpecialDate").focus(); return; }
+    if (!year || year < 1200 || year > 1600 || !month || !day){ document.getElementById("mSpecialYear").focus(); return; }
+    var date = jalaliToISO(year, month, day);
 
     if (existingId){
       var p = state.specialPlans.find(function(x){ return x.id===existingId; });
@@ -898,6 +991,36 @@
     saveState();
     closeModal();
     renderAll();
+  }
+
+  function openDaySpecialModal(iso){
+    var overlay = document.getElementById("modalOverlay");
+    var body = document.getElementById("modalBody");
+    var plans = state.specialPlans.filter(function(p){ return p.date === iso; })
+      .sort(function(a,b){
+        var ta = a.timeEnabled && a.time ? a.time : "00:00";
+        var tb = b.timeEnabled && b.time ? b.time : "00:00";
+        return ta < tb ? -1 : (ta > tb ? 1 : 0);
+      });
+    var html = "";
+    html += '<h2>'+jalaliLongDate(iso)+'</h2>';
+    if (!plans.length){
+      html += '<div class="dimmer">برنامه خاصی برای این روز ثبت نشده</div>';
+    } else {
+      plans.forEach(function(p){
+        html += '<div class="day-special-item">';
+        html += '  <div class="t">📌 '+escapeHtml(p.title)+'</div>';
+        if (p.timeEnabled && p.time){
+          html += '  <div class="m">🕒 در ساعت '+p.time+' باید این کار رو انجام بدی</div>';
+        } else {
+          html += '  <div class="m">برنامه‌ی این روز — بدون ساعت مشخص</div>';
+        }
+        html += '</div>';
+      });
+    }
+    html += '<div class="modal-actions"><button class="btn btn-ghost" data-act="close-modal">بستن</button></div>';
+    body.innerHTML = html;
+    overlay.classList.remove("hidden");
   }
 
   /* ============================= Notification watcher (only while app is open) ============================= */
@@ -1050,7 +1173,7 @@
     if (noteArea){
       noteArea.addEventListener("input", function(){
         state.notes[viewedDayISO] = noteArea.value;
-        saveState();
+        saveNoteDebounced();
       });
     }
   }
@@ -1094,6 +1217,17 @@
     var missedTotal = totalApplicable - totalDone;
     if (missedTotal > 0) html += ' — '+faNum(missedTotal)+' مورد جا افتاده';
     html += '</div>';
+    html += '  <div class="week-day-strip">';
+    dates.forEach(function(iso){
+      var hasSpecial = state.specialPlans.some(function(p){ return p.date === iso; });
+      var isToday = iso === todayISO();
+      html += '<div class="wds-cell '+(isToday?'today':'')+'" '+(hasSpecial?'data-act="view-day-special" data-date="'+iso+'"':'')+'>';
+      html += '<span>'+WEEKDAY_FA_SHORT[isoToDate(iso).getDay()]+'</span>';
+      html += '<span style="font-weight:800;color:var(--text);">'+faNum(jalaliOf(iso).d)+'</span>';
+      html += hasSpecial ? '<span class="wds-dot"></span>' : '<span style="width:5px;height:5px;"></span>';
+      html += '</div>';
+    });
+    html += '  </div>';
     html += '</div>';
 
     html += '<div class="card"><h3>جدول هفتگی برنامه‌ها</h3>';
@@ -1154,15 +1288,13 @@
   /* ---------- MONTH ---------- */
   function renderMonth(){
     var el = document.getElementById("panel-month");
-    var info = currentMonthInfo();
-    var j = gregorianToJalali(info.year, info.month+1, 15);
+    var info = currentJalaliMonthInfo();
 
     var dayCells = [];
-    var firstWeekday = info.first.getDay(); // 0..6, Saturday=6
-    var leadingBlanks = (firstWeekday - 6 + 7) % 7;
+    var leadingBlanks = (info.firstWeekday - 6 + 7) % 7;
     for (var i=0;i<leadingBlanks;i++) dayCells.push(null);
     for (var d=1; d<=info.daysInMonth; d++){
-      dayCells.push(toISO(new Date(info.year, info.month, d)));
+      dayCells.push(jalaliToISO(info.jy, info.jm, d));
     }
 
     function dayCompletion(iso){
@@ -1171,16 +1303,18 @@
       var done = applicable.filter(function(h){ return isDone(h, iso); }).length;
       return done/applicable.length;
     }
+    function dayHasSpecial(iso){
+      return state.specialPlans.some(function(p){ return p.date === iso; });
+    }
 
     var html = "";
     html += '<div class="nav-switch">';
     html += '  <button class="chev" data-act="month-prev">‹</button>';
-    html += '  <div class="mid"><div class="big">'+JMONTHS[j[1]-1]+' '+faNum(j[0])+'</div><div class="small">'+(monthOffset===0?'این ماه':(monthOffset<0?'ماه گذشته':'ماه آینده'))+'</div></div>';
+    html += '  <div class="mid"><div class="big">'+JMONTHS[info.jm-1]+' '+faNum(info.jy)+'</div><div class="small">'+(monthOffset===0?'این ماه':(monthOffset<0?'ماه گذشته':'ماه آینده'))+'</div></div>';
     html += '  <button class="chev" data-act="month-next">›</button>';
     html += '</div>';
 
     html += '<div class="card"><h3>نمای کلی ماه</h3><div class="month-grid">';
-    WEEKDAY_FA_SHORT.slice().map(function(x,i){return x;});
     // header order matches WEEK_ORDER (sat..fri)
     var headOrder = [6,0,1,2,3,4,5];
     headOrder.forEach(function(dow){ html += '<div class="wd">'+WEEKDAY_FA_SHORT[dow]+'</div>'; });
@@ -1199,10 +1333,13 @@
       }
       var isToday = iso===todayISO();
       var dnum = jalaliOf(iso).d;
-      html += '<div class="mcell '+(isToday?'today':'')+'" style="background:'+bg+';" title="'+iso+'">'+faNum(dnum)+'</div>';
+      var hasSpecial = dayHasSpecial(iso);
+      html += '<div class="mcell '+(isToday?'today':'')+'" style="background:'+bg+';" '+(hasSpecial?'data-act="view-day-special" data-date="'+iso+'"':'')+' title="'+jalaliShort(iso)+'">'+faNum(dnum);
+      if (hasSpecial) html += '<span class="mcell-dot"></span>';
+      html += '</div>';
     });
     html += '</div>';
-    html += '<div class="dimmer" style="margin-top:12px;">رنگ سبز = روزهای پرانجام، رنگ قرمز = روزهای ضعیف عملکرد</div>';
+    html += '<div class="dimmer" style="margin-top:12px;">رنگ سبز = روزهای پرانجام، رنگ قرمز = روزهای ضعیف عملکرد · نقطه‌ی زرد = برنامه خاص دارد</div>';
     html += '</div>';
 
     if (!state.habits.length){
@@ -1461,6 +1598,18 @@
       }
       case "renew-subscription": renewSubscription(); break;
       case "logout": doLogout(); break;
+      case "view-day-special": {
+        var dateAttr = act.getAttribute("data-date");
+        if (dateAttr) openDaySpecialModal(dateAttr);
+        break;
+      }
+      case "open-account": {
+        currentTab = "account";
+        document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab")==="account"); });
+        document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
+        document.getElementById("panel-account").classList.add("active");
+        break;
+      }
     }
   });
 
