@@ -1,4 +1,4 @@
-const CACHE = "planner-cache-v1";
+const CACHE = "planner-cache-v2"; // هر بار که تغییر مهمی دادید این عدد رو یکی زیاد کنید
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -16,14 +16,33 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  var req = event.request;
+  var isHTML = req.mode === "navigate" || (req.headers.get("accept") || "").indexOf("text/html") !== -1;
+
+  if (isHTML) {
+    // Network-first: همیشه سعی می‌کنه آخرین نسخه رو از سرور بگیره،
+    // فقط وقتی آفلاینی از کش قدیمی استفاده می‌کنه.
+    event.respondWith(
+      fetch(req)
+        .then((response) => {
+          var copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, copy));
+          return response;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // بقیه فایل‌ها (آیکون، مانیفست و...): اول کش، بعد شبکه
   event.respondWith(
-    caches.match(event.request).then((cached) => {
+    caches.match(req).then((cached) => {
       return (
         cached ||
-        fetch(event.request)
+        fetch(req)
           .then((response) => {
-            const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+            var copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
             return response;
           })
           .catch(() => cached)
