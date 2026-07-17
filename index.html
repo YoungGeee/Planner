@@ -366,6 +366,11 @@
   .special-item.near-highlight{ background:rgba(242,184,75,.06); border-radius:12px; }
   .field-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
   .field-row input[type="checkbox"]{ width:19px; height:19px; accent-color:var(--accent); }
+  .goal-check-list{ display:flex; flex-direction:column; gap:9px; max-height:180px; overflow-y:auto; padding:2px; }
+  .goal-check-list label{ display:flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600; color:var(--text); }
+  .goal-check-list input[type="checkbox"]{ width:19px; height:19px; min-width:19px; accent-color:var(--accent); }
+  .goal-add-row{ display:flex; gap:8px; margin-top:10px; }
+  .goal-add-row input{ flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 12px; color:var(--text); font-size:13px; }
   .field-row label{ font-size:13.5px; font-weight:600; color:var(--text); }
   .field input[type="date"], .field input[type="time"]{
     width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
@@ -583,12 +588,14 @@
         if(!loaded.account.subscriptionEnd) loaded.account.subscriptionEnd = addDaysISO(todayISO(), TRIAL_DAYS);
         if(loaded.account.username === undefined) loaded.account.username = null;
 
-        // Migrate old free-text habit.goal into proper goal objects (no duplicates:
-        // habits that share the same goal text get linked to the same goal record).
+        // Migrate to goalIds[] (a habit can now have multiple goals, or none):
+        // - very old free-text habit.goal -> matched/created goal record
+        // - previous single habit.goalId -> goalIds:[goalId]
+        // No duplicate goal records are created: matching is done by title.
         var migrated = false;
         loaded.habits.forEach(function(h){
-          if(h.goalId === undefined) h.goalId = null;
-          if(h.goal && !h.goalId){
+          if(h.goalIds === undefined) h.goalIds = [];
+          if(h.goal){
             var title = String(h.goal).trim();
             if(title){
               var match = loaded.goals.find(function(g){ return g.title === title; });
@@ -596,11 +603,16 @@
                 match = { id: uid(), title: title, targetDate: null, createdAt: todayISO() };
                 loaded.goals.push(match);
               }
-              h.goalId = match.id;
+              if(h.goalIds.indexOf(match.id) === -1) h.goalIds.push(match.id);
               migrated = true;
             }
           }
           if(h.goal !== undefined){ delete h.goal; migrated = true; }
+          if(h.goalId){
+            if(h.goalIds.indexOf(h.goalId) === -1) h.goalIds.push(h.goalId);
+            migrated = true;
+          }
+          if(h.goalId !== undefined){ delete h.goalId; migrated = true; }
         });
 
         applyState(loaded);
@@ -882,16 +894,18 @@
   }
 
   /* ============================= Goal computations ============================= */
-  function habitGoalTitle(h){
-    if(!h.goalId) return null;
-    var g = state.goals.find(function(x){ return x.id===h.goalId; });
-    return g ? g.title : null;
+  function habitGoalTitles(h){
+    return (h.goalIds||[]).map(function(id){
+      var g = state.goals.find(function(x){ return x.id===id; });
+      return g ? g.title : null;
+    }).filter(function(t){ return !!t; });
   }
   // Aggregates progress across every habit linked to a goal: sums each habit's
   // completed days over its target days, so the goal's bar reflects combined
-  // progress of all programs tied to it (not just a single habit).
+  // progress of all programs tied to it (not just a single habit). A habit with
+  // several goals contributes to each of those goals' progress.
   function goalStats(goal){
-    var linked = state.habits.filter(function(h){ return h.goalId === goal.id; });
+    var linked = state.habits.filter(function(h){ return (h.goalIds||[]).indexOf(goal.id) !== -1; });
     var sumCompleted = 0, sumTarget = 0, achievedCount = 0;
     linked.forEach(function(h){
       var st = habitStats(h);
@@ -1263,8 +1277,8 @@
         html += '  <button class="check '+(checked?'checked':'')+'" data-act="toggle" data-id="'+h.id+'">'+(checked?'✓':'')+'</button>';
         html += '  <div class="task-info">';
         html += '    <div class="task-name '+(checked?'checked-text':'')+'">'+escapeHtml(h.name)+'</div>';
-        var gTitle1 = habitGoalTitle(h);
-        if (gTitle1) html += '    <div class="task-goal">🎯 '+escapeHtml(gTitle1)+'</div>';
+        var gTitles1 = habitGoalTitles(h);
+        if (gTitles1.length) html += '    <div class="task-goal">🎯 '+escapeHtml(gTitles1.join('، '))+'</div>';
         html += '  </div>';
         html += '</div>';
       });
@@ -1482,8 +1496,8 @@
         }
         html += '<div class="card">';
         html += '  <div class="habit-card-head"><div><div class="habit-title">'+escapeHtml(h.name)+'</div>';
-        var gTitle2 = habitGoalTitle(h);
-        if (gTitle2) html += '<div class="habit-goal">🎯 '+escapeHtml(gTitle2)+'</div>';
+        var gTitles2 = habitGoalTitles(h);
+        if (gTitles2.length) html += '<div class="habit-goal">🎯 '+escapeHtml(gTitles2.join('، '))+'</div>';
         html += '  </div>'+(h.goalAchieved? '<span class="pill good">هدف محقق شد</span>':'')+'</div>';
         html += '  <div class="dotgrid">'+dots+'</div>';
         html += '  <div class="progress-bar"><div style="width:'+st.progressPct+'%;"></div></div>';
@@ -1528,8 +1542,8 @@
         var st = habitStats(h);
         html += '<div class="card">';
         html += '  <div class="habit-card-head"><div><div class="habit-title">'+escapeHtml(h.name)+'</div>';
-        var gTitle2 = habitGoalTitle(h);
-        if (gTitle2) html += '<div class="habit-goal">🎯 '+escapeHtml(gTitle2)+'</div>';
+        var gTitles2 = habitGoalTitles(h);
+        if (gTitles2.length) html += '<div class="habit-goal">🎯 '+escapeHtml(gTitles2.join('، '))+'</div>';
         html += '  <div class="dimmer" style="margin-top:6px;">شروع: '+jalaliShort(h.startDate)+' — دوره: '+faNum(h.targetDays)+' روز</div>';
         html += '  </div>'+(h.goalAchieved? '<span class="pill good">محقق شد</span>':'')+'</div>';
         html += '  <div class="progress-bar"><div style="width:'+st.progressPct+'%;"></div></div>';
@@ -1663,7 +1677,12 @@
 
   function deleteGoal(id){
     state.goals = state.goals.filter(function(x){ return x.id!==id; });
-    state.habits.forEach(function(h){ if (h.goalId === id) h.goalId = null; });
+    state.habits.forEach(function(h){
+      if (h.goalIds){
+        var idx = h.goalIds.indexOf(id);
+        if (idx !== -1) h.goalIds.splice(idx, 1);
+      }
+    });
     saveState();
     renderAll();
   }
@@ -1715,16 +1734,19 @@
     var html = "";
     html += '<h2>'+(existing? 'ویرایش برنامه' : 'افزودن برنامه جدید')+'</h2>';
     html += '<div class="field"><label>نام تسک</label><input type="text" id="mHabitName" placeholder="مثلاً: باشگاه" value="'+(existing? escapeHtml(existing.name):"")+'"></div>';
-    html += '<div class="field"><label>هدف (اختیاری)</label>';
-    html += '<select id="mHabitGoalSelect"><option value="">بدون هدف</option>';
+    html += '<div class="field"><label>اهداف (اختیاری — می‌تونی چند مورد انتخاب کنی)</label>';
+    html += '<div class="goal-check-list" id="mHabitGoalsList">';
+    var existingGoalIds = existing && existing.goalIds ? existing.goalIds : [];
     sortedGoals().forEach(function(g){
-      var sel = (existing && existing.goalId === g.id) ? "selected" : "";
-      html += '<option value="'+g.id+'" '+sel+'>'+escapeHtml(g.title)+'</option>';
+      var checked = existingGoalIds.indexOf(g.id) !== -1 ? "checked" : "";
+      html += '<label><input type="checkbox" class="mHabitGoalCheckbox" value="'+g.id+'" '+checked+'>'+escapeHtml(g.title)+'</label>';
     });
-    html += '<option value="__new__">+ هدف جدید...</option>';
-    html += '</select>';
-    html += '<input type="text" id="mHabitNewGoalTitle" placeholder="عنوان هدف جدید" style="margin-top:8px;display:none;">';
-    html += '<div class="hint">هدف رو از لیست بالا انتخاب کن تا بین چند برنامه به اشتراک گذاشته بشه، یا هدف تازه بساز — هر هدف فقط یک‌بار ساخته می‌شود.</div>';
+    if (!sortedGoals().length){
+      html += '<div class="dimmer">هنوز هدفی نساختی — از پایین یکی اضافه کن</div>';
+    }
+    html += '</div>';
+    html += '<div class="goal-add-row"><input type="text" id="mHabitNewGoalTitle" placeholder="عنوان هدف جدید"><button type="button" class="btn btn-ghost btn-sm" id="mHabitAddGoalBtn" style="width:auto;">افزودن</button></div>';
+    html += '<div class="hint">هر هدف فقط یک‌بار ساخته می‌شود — از چک‌باکس‌ها هر تعداد که خواستی انتخاب کن یا هدف تازه بساز.</div>';
     html += '</div>';
     html += '<div class="field"><label>مدت زمان تکرار (روز)</label><input type="number" min="1" id="mHabitTarget" value="'+(existing? existing.targetDays : 30)+'"><div class="hint">پیشنهاد می‌شود حداقل ۳۰ روز باشد، اما می‌تونی هر عددی که خودت مدنظرته وارد کنی.</div></div>';
     html += '<div class="field"><label>پاداش این برنامه</label>';
@@ -1748,11 +1770,35 @@
     body.innerHTML = html;
     overlay.classList.remove("hidden");
 
-    var goalSelectEl = document.getElementById("mHabitGoalSelect");
-    var newGoalInputEl = document.getElementById("mHabitNewGoalTitle");
-    if (goalSelectEl && newGoalInputEl){
-      goalSelectEl.addEventListener("change", function(){
-        newGoalInputEl.style.display = goalSelectEl.value === "__new__" ? "" : "none";
+    var addGoalBtn = document.getElementById("mHabitAddGoalBtn");
+    var newGoalTitleInput = document.getElementById("mHabitNewGoalTitle");
+    var goalsListEl = document.getElementById("mHabitGoalsList");
+    if (addGoalBtn){
+      addGoalBtn.addEventListener("click", function(){
+        var t = newGoalTitleInput.value.trim();
+        if (!t) return;
+        var g = state.goals.find(function(x){ return x.title === t; });
+        var isNew = false;
+        if (!g){
+          g = { id: uid(), title: t, targetDate: null, createdAt: todayISO() };
+          state.goals.push(g);
+          isNew = true;
+        }
+        var already = goalsListEl.querySelector('input[value="'+g.id+'"]');
+        if (already){
+          already.checked = true;
+        } else {
+          var emptyHint = goalsListEl.querySelector(".dimmer");
+          if (emptyHint) emptyHint.remove();
+          var lbl = document.createElement("label");
+          lbl.innerHTML = '<input type="checkbox" class="mHabitGoalCheckbox" value="'+g.id+'" checked>'+escapeHtml(g.title);
+          goalsListEl.appendChild(lbl);
+        }
+        newGoalTitleInput.value = "";
+        if (isNew) saveState();
+      });
+      newGoalTitleInput.addEventListener("keydown", function(e){
+        if (e.key === "Enter"){ e.preventDefault(); addGoalBtn.click(); }
       });
     }
   }
@@ -1769,35 +1815,32 @@
     if (!name){ document.getElementById("mHabitName").focus(); return; }
     if (!target || target < 1) target = 30;
 
-    // Resolve goal: pick an existing goal by id, create a new one, or none —
-    // never create a duplicate goal record for the same picked value.
-    var goalId = null;
-    var goalSelect = document.getElementById("mHabitGoalSelect");
-    if (goalSelect){
-      var gv = goalSelect.value;
-      if (gv === "__new__"){
-        var newGoalTitle = document.getElementById("mHabitNewGoalTitle").value.trim();
-        if (newGoalTitle){
-          var existingGoal = state.goals.find(function(g){ return g.title === newGoalTitle; });
-          if (!existingGoal){
-            existingGoal = { id: uid(), title: newGoalTitle, targetDate: null, createdAt: todayISO() };
-            state.goals.push(existingGoal);
-          }
-          goalId = existingGoal.id;
-        }
-      } else if (gv){
-        goalId = gv;
+    // Collect every checked goal checkbox — a habit can be linked to any number
+    // of goals (or none).
+    var goalIds = [];
+    document.querySelectorAll(".mHabitGoalCheckbox:checked").forEach(function(cb){ goalIds.push(cb.value); });
+
+    // If the person typed a new goal title but never clicked "افزودن", pick it
+    // up here too so it isn't silently lost.
+    var pendingNewGoalTitle = document.getElementById("mHabitNewGoalTitle");
+    if (pendingNewGoalTitle && pendingNewGoalTitle.value.trim()){
+      var pendingTitle = pendingNewGoalTitle.value.trim();
+      var pendingGoal = state.goals.find(function(g){ return g.title === pendingTitle; });
+      if (!pendingGoal){
+        pendingGoal = { id: uid(), title: pendingTitle, targetDate: null, createdAt: todayISO() };
+        state.goals.push(pendingGoal);
       }
+      if (goalIds.indexOf(pendingGoal.id) === -1) goalIds.push(pendingGoal.id);
     }
 
     if (existingId){
       var h = state.habits.find(function(x){ return x.id===existingId; });
-      if (h){ h.name = name; h.goalId = goalId; h.targetDays = target; h.rewardId = rewardId; }
+      if (h){ h.name = name; h.goalIds = goalIds; h.targetDays = target; h.rewardId = rewardId; }
     } else {
       state.habits.push({
         id: uid(),
         name: name,
-        goalId: goalId,
+        goalIds: goalIds,
         targetDays: target,
         startDate: todayISO(),
         goalAchieved: false,
