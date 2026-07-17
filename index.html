@@ -431,6 +431,7 @@
       <button class="tab-btn" data-tab="week"><span class="ic">▤</span>هفتگی</button>
       <button class="tab-btn" data-tab="month"><span class="ic">▦</span>ماهانه</button>
       <button class="tab-btn" data-tab="habits"><span class="ic">✚</span>برنامه‌ها</button>
+      <button class="tab-btn" data-tab="goals"><span class="ic">🎯</span>اهداف</button>
       <button class="tab-btn" data-tab="special"><span class="ic">📌</span>برنامه خاص</button>
       <button class="tab-btn" data-tab="rewards"><span class="ic">★</span>پاداش</button>
     </div>
@@ -441,6 +442,7 @@
     <section class="tab-panel" id="panel-week"></section>
     <section class="tab-panel" id="panel-month"></section>
     <section class="tab-panel" id="panel-habits"></section>
+    <section class="tab-panel" id="panel-goals"></section>
     <section class="tab-panel" id="panel-special"></section>
     <section class="tab-panel" id="panel-rewards"></section>
     <section class="tab-panel" id="panel-account"></section>
@@ -498,7 +500,8 @@
       rewards: [],
       notes: {},
       specialPlans: [],
-      account: { subscriptionEnd: addDaysISO(todayISO(), TRIAL_DAYS) }
+      goals: [],
+      account: { subscriptionEnd: addDaysISO(todayISO(), TRIAL_DAYS), username: null }
     };
   }
 
@@ -566,9 +569,33 @@
         if(!loaded.rewards) loaded.rewards = [];
         if(!loaded.notes) loaded.notes = {};
         if(!loaded.specialPlans) loaded.specialPlans = [];
-        if(!loaded.account) loaded.account = { subscriptionEnd: addDaysISO(todayISO(), TRIAL_DAYS) };
+        if(!loaded.goals) loaded.goals = [];
+        if(!loaded.account) loaded.account = { subscriptionEnd: addDaysISO(todayISO(), TRIAL_DAYS), username: null };
         if(!loaded.account.subscriptionEnd) loaded.account.subscriptionEnd = addDaysISO(todayISO(), TRIAL_DAYS);
+        if(loaded.account.username === undefined) loaded.account.username = null;
+
+        // Migrate old free-text habit.goal into proper goal objects (no duplicates:
+        // habits that share the same goal text get linked to the same goal record).
+        var migrated = false;
+        loaded.habits.forEach(function(h){
+          if(h.goalId === undefined) h.goalId = null;
+          if(h.goal && !h.goalId){
+            var title = String(h.goal).trim();
+            if(title){
+              var match = loaded.goals.find(function(g){ return g.title === title; });
+              if(!match){
+                match = { id: uid(), title: title, targetDate: null, createdAt: todayISO() };
+                loaded.goals.push(match);
+              }
+              h.goalId = match.id;
+              migrated = true;
+            }
+          }
+          if(h.goal !== undefined){ delete h.goal; migrated = true; }
+        });
+
         applyState(loaded);
+        if(migrated) doSave();
       });
   }
 
@@ -577,6 +604,7 @@
     state.rewards = loaded.rewards;
     state.notes = loaded.notes;
     state.specialPlans = loaded.specialPlans;
+    state.goals = loaded.goals;
     state.account = loaded.account;
   }
 
@@ -661,7 +689,7 @@
           }
           return;
         }
-        onAuthed(r.data.user);
+        onAuthed(r.data.user, username);
       });
     });
   });
@@ -674,9 +702,13 @@
     });
   }
 
-  function onAuthed(user){
+  function onAuthed(user, username){
     currentUser = user;
     fetchState().then(function(){
+      if(username && state.account.username !== username){
+        state.account.username = username;
+        doSave();
+      }
       showApp();
       checkLockState();
       renderAll();
@@ -827,6 +859,28 @@
     return { elapsed: elapsed, completed: completed, target: target, progressPct: progressPct, negativePct: negativePct, missed: missed };
   }
 
+  /* ============================= Goal computations ============================= */
+  function habitGoalTitle(h){
+    if(!h.goalId) return null;
+    var g = state.goals.find(function(x){ return x.id===h.goalId; });
+    return g ? g.title : null;
+  }
+  // Aggregates progress across every habit linked to a goal: sums each habit's
+  // completed days over its target days, so the goal's bar reflects combined
+  // progress of all programs tied to it (not just a single habit).
+  function goalStats(goal){
+    var linked = state.habits.filter(function(h){ return h.goalId === goal.id; });
+    var sumCompleted = 0, sumTarget = 0, achievedCount = 0;
+    linked.forEach(function(h){
+      var st = habitStats(h);
+      sumCompleted += st.completed;
+      sumTarget += st.target;
+      if (h.goalAchieved) achievedCount++;
+    });
+    var pct = sumTarget ? clamp(Math.round((sumCompleted/sumTarget)*100), 0, 100) : 0;
+    return { linked: linked, pct: pct, achievedCount: achievedCount, total: linked.length };
+  }
+
   function habitWeekStats(habit, weekDates){
     var countableDates = weekDates.filter(function(iso){ return isCountable(habit, iso); });
     var doneCount = countableDates.filter(function(iso){ return isDone(habit, iso); }).length;
@@ -876,6 +930,7 @@
     renderWeek();
     renderMonth();
     renderHabits();
+    renderGoals();
     renderSpecial();
     renderRewards();
     renderAccount();
@@ -1106,6 +1161,12 @@
 
     var html = "";
     html += '<div class="card">';
+    html += '  <div class="account-card-head"><h3 style="margin:0;">حساب کاربری</h3></div>';
+    html += '  <div class="dimmer" style="margin-top:4px;">نام کاربری</div>';
+    html += '  <div style="font-weight:800;font-size:17px;margin-top:3px;">'+escapeHtml(state.account.username || "—")+'</div>';
+    html += '</div>';
+
+    html += '<div class="card">';
     html += '  <div class="account-card-head"><h3 style="margin:0;">اشتراک</h3></div>';
     html += '  <div class="sub-days-num '+(days<=5?'low':'')+'">'+faNum(Math.max(days,0))+' <span style="font-size:14px;font-weight:700;color:var(--text-dim);">روز باقی‌مانده</span></div>';
     html += '  <div class="dimmer" style="margin-top:6px;">تاریخ پایان اشتراک: '+jalaliLongDate(state.account.subscriptionEnd)+'</div>';
@@ -1180,7 +1241,8 @@
         html += '  <button class="check '+(checked?'checked':'')+'" data-act="toggle" data-id="'+h.id+'">'+(checked?'✓':'')+'</button>';
         html += '  <div class="task-info">';
         html += '    <div class="task-name '+(checked?'checked-text':'')+'">'+escapeHtml(h.name)+'</div>';
-        if (h.goal) html += '    <div class="task-goal">🎯 '+escapeHtml(h.goal)+'</div>';
+        var gTitle1 = habitGoalTitle(h);
+        if (gTitle1) html += '    <div class="task-goal">🎯 '+escapeHtml(gTitle1)+'</div>';
         html += '  </div>';
         html += '</div>';
       });
@@ -1398,7 +1460,8 @@
         }
         html += '<div class="card">';
         html += '  <div class="habit-card-head"><div><div class="habit-title">'+escapeHtml(h.name)+'</div>';
-        if (h.goal) html += '<div class="habit-goal">🎯 '+escapeHtml(h.goal)+'</div>';
+        var gTitle2 = habitGoalTitle(h);
+        if (gTitle2) html += '<div class="habit-goal">🎯 '+escapeHtml(gTitle2)+'</div>';
         html += '  </div>'+(h.goalAchieved? '<span class="pill good">هدف محقق شد</span>':'')+'</div>';
         html += '  <div class="dotgrid">'+dots+'</div>';
         html += '  <div class="progress-bar"><div style="width:'+st.progressPct+'%;"></div></div>';
@@ -1443,7 +1506,8 @@
         var st = habitStats(h);
         html += '<div class="card">';
         html += '  <div class="habit-card-head"><div><div class="habit-title">'+escapeHtml(h.name)+'</div>';
-        if (h.goal) html += '<div class="habit-goal">🎯 '+escapeHtml(h.goal)+'</div>';
+        var gTitle2 = habitGoalTitle(h);
+        if (gTitle2) html += '<div class="habit-goal">🎯 '+escapeHtml(gTitle2)+'</div>';
         html += '  <div class="dimmer" style="margin-top:6px;">شروع: '+jalaliShort(h.startDate)+' — دوره: '+faNum(h.targetDays)+' روز</div>';
         html += '  </div>'+(h.goalAchieved? '<span class="pill good">محقق شد</span>':'')+'</div>';
         html += '  <div class="progress-bar"><div style="width:'+st.progressPct+'%;"></div></div>';
@@ -1459,6 +1523,127 @@
       });
     }
     el.innerHTML = html;
+  }
+
+  /* ---------- GOALS ---------- */
+  function sortedGoals(){
+    return state.goals.slice().sort(function(a,b){
+      if(a.targetDate && b.targetDate) return a.targetDate < b.targetDate ? -1 : (a.targetDate > b.targetDate ? 1 : 0);
+      if(a.targetDate) return -1;
+      if(b.targetDate) return 1;
+      return 0;
+    });
+  }
+
+  function renderGoals(){
+    var el = document.getElementById("panel-goals");
+    var html = "";
+    html += '<button class="btn btn-accent" data-act="open-add-goal" style="margin-bottom:16px;">＋ افزودن هدف جدید</button>';
+    html += '<div class="dimmer" style="margin-bottom:14px;">هر هدف رو یک‌بار اینجا بساز، بعد از تب «برنامه‌ها» همون هدف رو برای هر برنامه انتخاب کن — نیازی به نوشتن دوباره‌ی هدف نیست.</div>';
+
+    var goals = sortedGoals();
+    if (!goals.length){
+      html += '<div class="card"><div class="empty-state"><div class="e-icon">🎯</div><div class="e-title">هنوز هدفی ثبت نشده</div><div class="dimmer">یک هدف بساز و برنامه‌هات رو بهش وصل کن</div></div></div>';
+    } else {
+      goals.forEach(function(g){
+        var st = goalStats(g);
+        html += '<div class="card">';
+        html += '  <div class="habit-card-head"><div><div class="habit-title">🎯 '+escapeHtml(g.title)+'</div>';
+        if (g.targetDate){
+          var daysLeft = diffDaysISO(todayISO(), g.targetDate);
+          var dueLabel = daysLeft < 0 ? 'تاریخ هدف گذشته' : ('تا تاریخ هدف: '+faNum(daysLeft)+' روز مانده');
+          html += '<div class="habit-goal">📅 '+jalaliLongDate(g.targetDate)+' — <span style="color:'+(daysLeft<0?'var(--bad)':'var(--accent)')+';">'+dueLabel+'</span></div>';
+        }
+        html += '  </div>'+(st.pct>=100? '<span class="pill good">تکمیل شد</span>':'')+'</div>';
+        html += '  <div class="progress-bar"><div style="width:'+st.pct+'%;"></div></div>';
+        html += '  <div class="habit-stats-line">';
+        html += '    <span class="pill accent">درصد موفقیت هدف '+faNum(st.pct)+'٪</span>';
+        html += '    <span class="pill neutral">'+(st.total? (faNum(st.total)+' برنامه مرتبط') : 'هنوز برنامه‌ای وصل نشده')+'</span>';
+        if (st.total) html += '    <span class="pill neutral">'+faNum(st.achievedCount)+' از '+faNum(st.total)+' محقق‌شده</span>';
+        html += '  </div>';
+        html += '  <div class="habit-actions">';
+        html += '    <button class="btn btn-ghost btn-sm" data-act="edit-goal" data-id="'+g.id+'">ویرایش</button>';
+        html += '    <button class="btn btn-danger-ghost btn-sm" data-act="delete-goal" data-id="'+g.id+'">حذف</button>';
+        html += '  </div>';
+        html += '</div>';
+      });
+    }
+    el.innerHTML = html;
+  }
+
+  function openGoalModal(existingId){
+    var existing = existingId ? state.goals.find(function(g){ return g.id===existingId; }) : null;
+    var overlay = document.getElementById("modalOverlay");
+    var body = document.getElementById("modalBody");
+    var baseJ = existing && existing.targetDate ? jalaliOf(existing.targetDate) : jalaliOf(todayISO());
+
+    var html = "";
+    html += '<h2>'+(existing? 'ویرایش هدف' : 'افزودن هدف جدید')+'</h2>';
+    html += '<div class="field"><label>عنوان هدف</label><input type="text" id="mGoalTitle" placeholder="مثلاً: رسیدن به وزن ۶۰ کیلو" value="'+(existing? escapeHtml(existing.title):"")+'"></div>';
+    html += '<div class="field-row"><input type="checkbox" id="mGoalDateEnabled" '+(existing && existing.targetDate ? "checked":"")+'><label for="mGoalDateEnabled">تاریخ هدف مشخصی داره</label></div>';
+    html += '<div class="field" id="mGoalDateField" style="'+(existing && existing.targetDate ? "" : "display:none;")+'">';
+    html += '  <label>تاریخ (شمسی)</label>';
+    html += '  <div style="display:flex;gap:8px;">';
+    html += '    <select id="mGoalDay" style="flex:.8;">'+jalaliDayOptionsHtml(baseJ.d, jalaliMonthLength(baseJ.y, baseJ.m))+'</select>';
+    html += '    <select id="mGoalMonth" style="flex:1.6;">'+jalaliMonthOptionsHtml(baseJ.m)+'</select>';
+    html += '    <input type="number" id="mGoalYear" style="flex:1;" value="'+baseJ.y+'">';
+    html += '  </div>';
+    html += '</div>';
+    html += '<div class="modal-actions">';
+    html += '  <button class="btn btn-ghost" data-act="close-modal">انصراف</button>';
+    html += '  <button class="btn btn-accent" data-act="save-goal" data-id="'+(existing? existing.id : "")+'">ذخیره</button>';
+    html += '</div>';
+
+    body.innerHTML = html;
+    overlay.classList.remove("hidden");
+
+    var cb = document.getElementById("mGoalDateEnabled");
+    cb.addEventListener("change", function(){
+      document.getElementById("mGoalDateField").style.display = cb.checked ? "" : "none";
+    });
+
+    function refreshDayOptions(){
+      var m = parseInt(document.getElementById("mGoalMonth").value, 10);
+      var y = parseInt(document.getElementById("mGoalYear").value, 10) || baseJ.y;
+      var daySelect = document.getElementById("mGoalDay");
+      var currentDay = parseInt(daySelect.value, 10) || 1;
+      var maxDay = jalaliMonthLength(y, m);
+      if (currentDay > maxDay) currentDay = maxDay;
+      daySelect.innerHTML = jalaliDayOptionsHtml(currentDay, maxDay);
+    }
+    document.getElementById("mGoalMonth").addEventListener("change", refreshDayOptions);
+    document.getElementById("mGoalYear").addEventListener("change", refreshDayOptions);
+  }
+
+  function saveGoalFromModal(existingId){
+    var title = document.getElementById("mGoalTitle").value.trim();
+    if (!title){ document.getElementById("mGoalTitle").focus(); return; }
+    var dateEnabled = document.getElementById("mGoalDateEnabled").checked;
+    var targetDate = null;
+    if (dateEnabled){
+      var day = parseInt(document.getElementById("mGoalDay").value, 10);
+      var month = parseInt(document.getElementById("mGoalMonth").value, 10);
+      var year = parseInt(document.getElementById("mGoalYear").value, 10);
+      if (!year || year < 1200 || year > 1600 || !month || !day){ document.getElementById("mGoalYear").focus(); return; }
+      targetDate = jalaliToISO(year, month, day);
+    }
+
+    if (existingId){
+      var g = state.goals.find(function(x){ return x.id===existingId; });
+      if (g){ g.title = title; g.targetDate = targetDate; }
+    } else {
+      state.goals.push({ id: uid(), title: title, targetDate: targetDate, createdAt: todayISO() });
+    }
+    saveState();
+    closeModal();
+    renderAll();
+  }
+
+  function deleteGoal(id){
+    state.goals = state.goals.filter(function(x){ return x.id!==id; });
+    state.habits.forEach(function(h){ if (h.goalId === id) h.goalId = null; });
+    saveState();
+    renderAll();
   }
 
   /* ---------- REWARDS ---------- */
@@ -1508,7 +1693,17 @@
     var html = "";
     html += '<h2>'+(existing? 'ویرایش برنامه' : 'افزودن برنامه جدید')+'</h2>';
     html += '<div class="field"><label>نام تسک</label><input type="text" id="mHabitName" placeholder="مثلاً: باشگاه" value="'+(existing? escapeHtml(existing.name):"")+'"></div>';
-    html += '<div class="field"><label>هدف (اختیاری)</label><input type="text" id="mHabitGoal" placeholder="مثلاً: رسیدن به وزن ۶۰ کیلو" value="'+(existing? escapeHtml(existing.goal||""):"")+'"></div>';
+    html += '<div class="field"><label>هدف (اختیاری)</label>';
+    html += '<select id="mHabitGoalSelect"><option value="">بدون هدف</option>';
+    sortedGoals().forEach(function(g){
+      var sel = (existing && existing.goalId === g.id) ? "selected" : "";
+      html += '<option value="'+g.id+'" '+sel+'>'+escapeHtml(g.title)+'</option>';
+    });
+    html += '<option value="__new__">+ هدف جدید...</option>';
+    html += '</select>';
+    html += '<input type="text" id="mHabitNewGoalTitle" placeholder="عنوان هدف جدید" style="margin-top:8px;display:none;">';
+    html += '<div class="hint">هدف رو از لیست بالا انتخاب کن تا بین چند برنامه به اشتراک گذاشته بشه، یا هدف تازه بساز — هر هدف فقط یک‌بار ساخته می‌شود.</div>';
+    html += '</div>';
     html += '<div class="field"><label>مدت زمان تکرار (روز)</label><input type="number" min="1" id="mHabitTarget" value="'+(existing? existing.targetDays : 30)+'"><div class="hint">پیشنهاد می‌شود حداقل ۳۰ روز باشد، اما می‌تونی هر عددی که خودت مدنظرته وارد کنی.</div></div>';
     html += '<div class="field"><label>پاداش این برنامه</label>';
     if (state.rewards.length){
@@ -1530,6 +1725,14 @@
 
     body.innerHTML = html;
     overlay.classList.remove("hidden");
+
+    var goalSelectEl = document.getElementById("mHabitGoalSelect");
+    var newGoalInputEl = document.getElementById("mHabitNewGoalTitle");
+    if (goalSelectEl && newGoalInputEl){
+      goalSelectEl.addEventListener("change", function(){
+        newGoalInputEl.style.display = goalSelectEl.value === "__new__" ? "" : "none";
+      });
+    }
   }
 
   function closeModal(){
@@ -1538,21 +1741,41 @@
 
   function saveHabitFromModal(existingId){
     var name = document.getElementById("mHabitName").value.trim();
-    var goal = document.getElementById("mHabitGoal").value.trim();
     var target = parseInt(document.getElementById("mHabitTarget").value, 10);
     var rewardSelect = document.getElementById("mHabitReward");
     var rewardId = rewardSelect ? (rewardSelect.value || null) : null;
     if (!name){ document.getElementById("mHabitName").focus(); return; }
     if (!target || target < 1) target = 30;
 
+    // Resolve goal: pick an existing goal by id, create a new one, or none —
+    // never create a duplicate goal record for the same picked value.
+    var goalId = null;
+    var goalSelect = document.getElementById("mHabitGoalSelect");
+    if (goalSelect){
+      var gv = goalSelect.value;
+      if (gv === "__new__"){
+        var newGoalTitle = document.getElementById("mHabitNewGoalTitle").value.trim();
+        if (newGoalTitle){
+          var existingGoal = state.goals.find(function(g){ return g.title === newGoalTitle; });
+          if (!existingGoal){
+            existingGoal = { id: uid(), title: newGoalTitle, targetDate: null, createdAt: todayISO() };
+            state.goals.push(existingGoal);
+          }
+          goalId = existingGoal.id;
+        }
+      } else if (gv){
+        goalId = gv;
+      }
+    }
+
     if (existingId){
       var h = state.habits.find(function(x){ return x.id===existingId; });
-      if (h){ h.name = name; h.goal = goal; h.targetDays = target; h.rewardId = rewardId; }
+      if (h){ h.name = name; h.goalId = goalId; h.targetDays = target; h.rewardId = rewardId; }
     } else {
       state.habits.push({
         id: uid(),
         name: name,
-        goal: goal,
+        goalId: goalId,
         targetDays: target,
         startDate: todayISO(),
         goalAchieved: false,
@@ -1605,6 +1828,15 @@
       }
       case "close-modal": closeModal(); break;
       case "save-habit": saveHabitFromModal(id || null); break;
+      case "open-add-goal": openGoalModal(null); break;
+      case "edit-goal": openGoalModal(id); break;
+      case "save-goal": saveGoalFromModal(id || null); break;
+      case "delete-goal": {
+        if (confirm("این هدف حذف بشه؟ برنامه‌های وصل‌شده به این هدف، بدون هدف باقی می‌مانند.")){
+          deleteGoal(id);
+        }
+        break;
+      }
       case "add-reward": addReward(); break;
       case "activate-reward": {
         var rw = state.rewards.find(function(x){ return x.id===id; });
