@@ -479,6 +479,12 @@
   /* ============================= Supabase / Cloud Storage ============================= */
   var SUPABASE_URL = "https://suhlfgqicetqktwcymqa.supabase.co";
   var SUPABASE_KEY = "sb_publishable_R-49m_1Ay9TLaJ8swZfRag_AYn5ktff";
+  if (typeof supabase === "undefined"){
+    console.error("[boot] supabase-js SDK did not load from CDN — check internet connection / filtering / ad-block.");
+    document.getElementById("authError").textContent = "اتصال به سرویس ابری برقرار نشد (ممکن است فیلترشکن لازم باشد). صفحه را رفرش کنید.";
+    document.getElementById("loginBtn").disabled = true;
+    return;
+  }
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   var TABLE = "planner_data";
   var currentUser = null;
@@ -496,6 +502,25 @@
     };
   }
 
+  // Shows a visible on-screen warning when a save to Supabase fails, so failures
+  // (missing RLS policy, missing unique constraint, network issue, etc.) are never
+  // silently invisible — previously these only went to console.error and looked
+  // like "delete/edit came back after refresh" with no clue why.
+  function showSaveError(err){
+    console.error("save error", err);
+    var el = document.getElementById("saveErrorToast");
+    if(!el){
+      el = document.createElement("div");
+      el.id = "saveErrorToast";
+      el.style.cssText = "position:fixed;bottom:100px;left:16px;right:16px;max-width:520px;margin:0 auto;background:#4a2321;color:#f0605a;border:1px solid #f0605a;border-radius:14px;padding:12px 16px;font-size:12.5px;line-height:1.7;z-index:200;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4);";
+      document.body.appendChild(el);
+    }
+    el.textContent = "❌ ذخیره‌سازی ناموفق بود — این تغییر با رفرش از بین می‌رود. خطا: " + (err && err.message ? err.message : "نامشخص");
+    el.style.display = "block";
+    clearTimeout(showSaveError._t);
+    showSaveError._t = setTimeout(function(){ el.style.display = "none"; }, 7000);
+  }
+
   // Writes the whole state to Supabase right away. Used for every structural change
   // (add/edit/delete/toggle) so that refreshing immediately after an action can never
   // race ahead of the save (this was the cause of edits/deletes "coming back" on refresh).
@@ -506,8 +531,8 @@
       data: state,
       updated_at: new Date().toISOString()
     }, { onConflict: "user_id" }).then(function(res){
-      if(res.error) console.error("save error", res.error);
-    });
+      if(res.error) showSaveError(res.error);
+    }).catch(function(err){ showSaveError(err); });
   }
   function saveState(){
     doSave();
@@ -529,7 +554,7 @@
   function fetchState(){
     return sb.from(TABLE).select("data").eq("user_id", currentUser.id).maybeSingle()
       .then(function(res){
-        if(res.error){ console.error("load error", res.error); return; }
+        if(res.error){ showSaveError(res.error); return; }
         var loaded = (res.data && res.data.data) ? res.data.data : null;
         if(!loaded){
           loaded = defaultState();
@@ -613,14 +638,29 @@
     setAuthBusy(true);
     authError.textContent = "";
     sb.from("admin_usernames").select("email").eq("username", username).maybeSingle().then(function(res){
-      if(res.error || !res.data){
+      if(res.error){
+        console.error("[login] admin_usernames lookup failed:", res.error);
+        setAuthBusy(false);
+        authError.textContent = "خطای اتصال به سرور — جزئیات دقیق توی کنسول مرورگر (F12) هست";
+        return;
+      }
+      if(!res.data){
+        console.warn("[login] no admin_usernames row found for username:", username);
         setAuthBusy(false);
         authError.textContent = "نام کاربری یا رمز عبور اشتباه است";
         return;
       }
       sb.auth.signInWithPassword({ email: res.data.email, password: pass }).then(function(r){
         setAuthBusy(false);
-        if(r.error){ authError.textContent = "نام کاربری یا رمز عبور اشتباه است"; return; }
+        if(r.error){
+          console.error("[login] signInWithPassword failed:", r.error);
+          if(/invalid login credentials/i.test(r.error.message || "")){
+            authError.textContent = "نام کاربری یا رمز عبور اشتباه است";
+          } else {
+            authError.textContent = "خطا: " + r.error.message + " (جزئیات بیشتر توی کنسول)";
+          }
+          return;
+        }
         onAuthed(r.data.user);
       });
     });
