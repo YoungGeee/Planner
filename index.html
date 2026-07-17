@@ -490,6 +490,12 @@
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   var TABLE = "planner_data";
   var currentUser = null;
+  // Nothing is ever written to Supabase until this becomes true (set only after
+  // fetchState has successfully loaded — or legitimately created — this user's row).
+  // This is what actually protects existing data: if a load ever fails partway
+  // (bad connection, server hiccup, a bug in a future update, etc.) the app simply
+  // cannot save over it with an empty/incomplete local state.
+  var stateLoaded = false;
 
   var TRIAL_DAYS = 36500; // ~100 years — accounts are limited to the pre-created admins, so "unlimited" in practice
   var RENEW_DAYS = 36500;
@@ -528,7 +534,7 @@
   // (add/edit/delete/toggle) so that refreshing immediately after an action can never
   // race ahead of the save (this was the cause of edits/deletes "coming back" on refresh).
   function doSave(){
-    if(!currentUser) return null;
+    if(!currentUser || !stateLoaded) return null;
     return sb.from(TABLE).upsert({
       user_id: currentUser.id,
       data: state,
@@ -555,14 +561,17 @@
   // `state` object in place, so every closure that already captured `state` still
   // points at the right data.
   function fetchState(){
+    stateLoaded = false;
     return sb.from(TABLE).select("data").eq("user_id", currentUser.id).maybeSingle()
       .then(function(res){
-        if(res.error){ showSaveError(res.error); return; }
+        if(res.error){ showSaveError(res.error); throw res.error; }
         var loaded = (res.data && res.data.data) ? res.data.data : null;
         if(!loaded){
           loaded = defaultState();
-          return sb.from(TABLE).insert({ user_id: currentUser.id, data: loaded }).then(function(){
+          return sb.from(TABLE).insert({ user_id: currentUser.id, data: loaded }).then(function(insRes){
+            if(insRes.error){ showSaveError(insRes.error); throw insRes.error; }
             applyState(loaded);
+            stateLoaded = true;
           });
         }
         if(!loaded.habits) loaded.habits = [];
@@ -595,6 +604,7 @@
         });
 
         applyState(loaded);
+        stateLoaded = true;
         if(migrated) doSave();
       });
   }
@@ -697,6 +707,7 @@
   function doLogout(){
     sb.auth.signOut().then(function(){
       currentUser = null;
+      stateLoaded = false;
       state = defaultState();
       showAuth();
     });
@@ -713,6 +724,17 @@
       checkLockState();
       renderAll();
       startTimeWatcher();
+    }).catch(function(err){
+      // Loading this user's data from Supabase failed partway through. Do NOT show
+      // the app in this case — the in-memory `state` may still be an empty default,
+      // and any action the person takes would call saveState() and overwrite their
+      // real cloud data with that empty state. Instead, sign out and send them back
+      // to the login screen so a retry starts clean.
+      stateLoaded = false;
+      sb.auth.signOut().finally(function(){
+        currentUser = null;
+        showAuth("بارگذاری اطلاعات از سرور ناموفق بود — اتصال اینترنت را بررسی کن و دوباره وارد شو. (چیزی از داده‌هات پاک نشده) خطا: " + (err && err.message ? err.message : "نامشخص"));
+      });
     });
   }
 
