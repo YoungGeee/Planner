@@ -1,1988 +1,419 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>پلنر شخصی</title>
+<html lang="fa" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>دفتر واریزی‌ها و هزینه‌ها</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0a0c11">
+<meta name="theme-color" content="#0A0A0B">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="پلنر">
+<meta name="apple-mobile-web-app-title" content="دفتر واریزی‌ها">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
-    --bg:#0a0c11;
-    --bg-2:#0d1017;
-    --surface:#12151d;
-    --surface-2:#1a1e29;
-    --surface-3:#232838;
-    --border:#252b3a;
-    --text:#eceef3;
-    --text-dim:#8991a6;
-    --text-dimmer:#5d6579;
-    --accent:#f2b84b;
-    --accent-dim:#7a6229;
-    --good:#3ecf9b;
-    --good-dim:#1c4a3c;
-    --bad:#f0605a;
-    --bad-dim:#4a2321;
-    --ring-track:#1c2029;
-    --radius-lg:22px;
-    --radius-md:16px;
-    --radius-sm:10px;
-    --shadow: 0 8px 30px rgba(0,0,0,.35);
+    --bg: #0A0A0B;
+    --panel: #16140F;
+    --panel-2: #1D1A13;
+    --border: #332C1B;
+    --border-soft: #262117;
+    --text: #F3ECDA;
+    --muted: #9C9280;
+    --gold: #6C63FF;
+    --gold-2: #9D8BFF;
+    --gold-dim: rgba(108,99,255,0.14);
+    --gold-dim-2: rgba(108,99,255,0.28);
+    --gold-panel: #14121F;
+    --gold-panel-2: #1A1729;
+    --gold-border: #2E2A48;
+    --gold-border-soft: #211E36;
+
+    --exp: #14B8A6;
+    --exp-2: #5EEAD4;
+    --exp-dim: rgba(20,184,166,0.14);
+    --exp-dim-2: rgba(20,184,166,0.28);
+    --exp-panel: #0C1B1A;
+    --exp-panel-2: #10231F;
+    --exp-border: #1E3D38;
+    --exp-border-soft: #162B27;
+
+    --red: #E5595E;
+    --red-dim: rgba(229,89,94,0.15);
+    --green: #6FBF73;
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:
-      radial-gradient(1200px 600px at 85% -10%, rgba(242,184,75,.07), transparent 60%),
-      radial-gradient(900px 500px at -10% 10%, rgba(62,207,155,.06), transparent 55%),
-      var(--bg);
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;min-height:100%;
+    background: radial-gradient(1200px 600px at 20% -10%, #1c1608 0%, var(--bg) 55%);
     color:var(--text);
-    font-family:'Vazirmatn', system-ui, sans-serif;
-    min-height:100vh;
+    font-family:'Vazirmatn', Tahoma, "Segoe UI", Arial, sans-serif;
+    direction:rtl;
     -webkit-font-smoothing:antialiased;
   }
-  ::selection{ background:var(--accent); color:#1a1206; }
-  button{ font-family:inherit; cursor:pointer; }
-  input, textarea{ font-family:inherit; }
-  .app{
-    max-width:760px;
-    margin:0 auto;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-    padding-bottom:96px;
+  .wrap{max-width:680px;margin:0 auto;padding:22px 12px 60px;}
+
+  .header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:0 6px;}
+  .header .dot{width:11px;height:11px;border-radius:50%;background:var(--gold);box-shadow:0 0 14px var(--gold);flex-shrink:0;}
+  .header h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.3px;}
+  .header span{color:var(--muted);font-size:11.5px;display:block;margin-top:2px;}
+
+  .total-card{
+    background:linear-gradient(160deg,var(--panel),var(--panel-2));
+    border:1px solid var(--border-soft);border-radius:16px;padding:18px;
+    text-align:center;margin-bottom:12px;position:relative;overflow:hidden;
+  }
+  .total-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--gold),var(--exp));}
+  .total-card .label{color:var(--muted);font-size:12px;margin-bottom:6px;}
+  .total-card .value{font-size:27px;font-weight:800;color:var(--gold);direction:ltr;unicode-bidi:plaintext;}
+  .total-card .value.neg{color:var(--red);}
+  .total-card .breakdown{display:flex;justify-content:center;gap:18px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-soft);}
+  .breakdown .bitem{text-align:center;}
+  .breakdown .bitem .blabel{font-size:10.5px;color:var(--muted);margin-bottom:3px;}
+  .breakdown .bitem .bval{font-size:14px;font-weight:800;direction:ltr;unicode-bidi:plaintext;}
+  .breakdown .bitem.dep .bval{color:var(--gold-2);}
+  .breakdown .bitem.exp .bval{color:var(--exp-2);}
+
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:18px 6px 8px;}
+  .section-title h2{font-size:13.5px;margin:0;font-weight:800;display:flex;align-items:center;gap:6px;}
+  .section-title .badge{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .section-title.dep .badge{background:var(--gold);box-shadow:0 0 8px var(--gold);}
+  .section-title.exp .badge{background:var(--exp);box-shadow:0 0 8px var(--exp);}
+  .section-title .count{color:var(--muted);font-size:11px;font-weight:600;}
+
+  .add-btn{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    border:none;padding:11px 16px;border-radius:12px;
+    font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;
+    transition:transform .15s ease, box-shadow .15s ease;
+    width:100%;margin-bottom:14px;
+  }
+  .add-btn.dep{background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#100C28;box-shadow:0 6px 18px rgba(108,99,255,.28);}
+  .add-btn.exp{background:linear-gradient(135deg,var(--exp-2),var(--exp));color:#052220;box-shadow:0 6px 18px rgba(20,184,166,.28);}
+  .add-btn:active{transform:translateY(1px);}
+
+  .entries-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:6px;
   }
 
-  /* ---------- Header ---------- */
-  .topbar{
-    position:sticky; top:0; z-index:20;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:18px 20px 14px;
-    background:linear-gradient(180deg, var(--bg) 60%, transparent);
-    backdrop-filter:blur(6px);
+  .entry-card{
+    background:linear-gradient(160deg,var(--gold-panel),var(--gold-panel-2));
+    border:1px solid var(--gold-border);border-radius:12px;padding:8px;
+    position:relative;transition:padding .18s ease;
   }
-  .brand-title{
-    font-size:13px; letter-spacing:.5px; color:var(--text-dimmer); font-weight:600;
-  }
-  .brand-date{
-    font-size:22px; font-weight:800; margin-top:2px;
-  }
-  .brand-date b{ color:var(--accent); font-weight:900; }
-  .icon-btn{
-    width:40px; height:40px; border-radius:50%;
-    background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim);
-    display:flex; align-items:center; justify-content:center; font-size:16px;
-    transition:.15s;
-  }
-  .icon-btn:hover{ background:var(--surface-3); color:var(--text); }
-  .app.hidden{ display:none; }
-
-  /* ---------- Auth screen ---------- */
-  .auth-screen{
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
-    padding:24px;
-  }
-  .auth-screen.hidden{ display:none; }
-  .auth-box{
-    width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px;
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:28px 22px; box-shadow:var(--shadow);
-  }
-  .auth-sub{ color:var(--text-dim); font-size:13px; margin-bottom:10px; }
-  .auth-box input{
-    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-    border-radius:var(--radius-sm); padding:12px 14px; font-size:14px; text-align:right;
-    direction:ltr; text-align:left;
-  }
-  .auth-box input:focus{ outline:none; border-color:var(--accent); }
-  .auth-error{ color:var(--bad); font-size:12.5px; min-height:16px; }
-  .auth-btn{
-    border:none; border-radius:var(--radius-sm); padding:12px; font-size:14px; font-weight:700;
-    background:var(--surface-2); color:var(--text); margin-top:2px; transition:.15s;
-  }
-  .auth-btn:hover{ background:var(--surface-3); }
-  .auth-btn.primary{ background:var(--accent); color:#1a1206; }
-  .auth-btn.primary:hover{ filter:brightness(1.05); }
-  .auth-btn:disabled{ opacity:.6; cursor:default; }
-
-  main{ flex:1; padding:6px 16px 20px; }
-  .tab-panel{ display:none; animation:fadeIn .25s ease; }
-  .tab-panel.active{ display:block; }
-  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
-
-  /* ---------- Cards / generic ---------- */
-  .card{
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius-lg);
-    padding:18px;
-    margin-bottom:14px;
-    box-shadow:var(--shadow);
-  }
-  .card h3{ margin:0 0 12px; font-size:15px; font-weight:700; color:var(--text); }
-  .row-between{ display:flex; align-items:center; justify-content:space-between; }
-  .muted{ color:var(--text-dim); font-size:13px; }
-  .dimmer{ color:var(--text-dimmer); font-size:12px; }
-  .pill{
-    display:inline-flex; align-items:center; gap:5px;
-    padding:4px 10px; border-radius:999px; font-size:11.5px; font-weight:700;
-  }
-  .pill.good{ background:var(--good-dim); color:var(--good); }
-  .pill.bad{ background:var(--bad-dim); color:var(--bad); }
-  .pill.accent{ background:var(--accent-dim); color:var(--accent); }
-  .pill.neutral{ background:var(--surface-3); color:var(--text-dim); }
-
-  /* ---------- Nav (date/week/month switcher) ---------- */
-  .nav-switch{
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:16px;
-  }
-  .nav-switch .mid{ text-align:center; }
-  .nav-switch .mid .big{ font-weight:800; font-size:16px; }
-  .nav-switch .mid .small{ font-size:12px; color:var(--text-dim); }
-  .chev{
-    width:38px; height:38px; border-radius:50%;
-    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-    display:flex; align-items:center; justify-content:center; font-size:16px;
-  }
-  .chev:active{ transform:scale(.92); }
-  .today-jump{
-    font-size:11px; color:var(--accent); background:none; border:none; padding:2px 0 0;
+  .entry-card.exp-card{
+    background:linear-gradient(160deg,var(--exp-panel),var(--exp-panel-2));
+    border:1px solid var(--exp-border);
   }
 
-  /* ---------- Ring ---------- */
-  .ring-wrap{ display:flex; align-items:center; gap:20px; }
-  .ring-svg-box{ position:relative; width:110px; height:110px; flex:none; }
-  .ring-svg-box svg{ transform:rotate(-90deg); }
-  .ring-center{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-size:19px; font-weight:900; color:var(--text);
+  .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:4px;}
+  .tick{
+    width:18px;height:18px;border-radius:6px;border:1.5px solid var(--gold-border);
+    background:#0B0A12;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:900;color:transparent;transition:all .15s ease;
   }
-  .ring-num{ font-size:20px; font-weight:800; }
-  .ring-label{ font-size:12.5px; color:var(--text-dim); margin-top:4px; }
-  .ring-stats{ display:flex; flex-direction:column; gap:2px; }
+  .exp-card .tick{border-color:var(--exp-border);background:#081513;}
+  .tick.on{color:#0A0A0B;}
+  .entry-card:not(.exp-card) .tick.on{background:var(--gold);border-color:var(--gold);color:#0F0B24;}
+  .exp-card .tick.on{background:var(--exp);border-color:var(--exp);color:#052220;}
 
-  /* ---------- Task / habit row ---------- */
-  .task-row{
-    display:flex; align-items:center; gap:12px;
-    padding:12px 4px; border-bottom:1px solid var(--border);
+  .del-btn{
+    background:transparent;border:none;color:var(--red);
+    cursor:pointer;font-size:14px;font-weight:800;line-height:1;padding:2px 4px;
+    opacity:.75;
   }
-  .task-row:last-child{ border-bottom:none; }
-  .check{
-    width:26px; height:26px; min-width:26px; border-radius:9px;
-    border:2px solid var(--border); background:var(--surface-2);
-    display:flex; align-items:center; justify-content:center;
-    transition:.15s; font-size:15px; color:transparent;
-  }
-  .check.checked{ background:var(--good); border-color:var(--good); color:#08130f; }
-  .task-info{ flex:1; min-width:0; }
-  .task-name{ font-weight:700; font-size:14.5px; }
-  .task-name.checked-text{ color:var(--text-dim); text-decoration:line-through; text-decoration-color:var(--text-dimmer); }
-  .task-goal{ font-size:12px; color:var(--text-dimmer); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .del-btn:active{opacity:1;}
 
-  .empty-state{
-    text-align:center; padding:40px 16px; color:var(--text-dimmer);
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:5px;}
+  .field:last-child{margin-bottom:0;}
+  .field input{
+    background:#0B0A12;border:1px solid var(--gold-border);color:var(--text);
+    border-radius:7px;padding:6px 7px;font-size:12px;font-family:inherit;font-weight:600;
+    width:100%;text-align:right;min-width:0;
   }
-  .empty-state .e-icon{ font-size:34px; margin-bottom:10px; }
-  .empty-state .e-title{ color:var(--text-dim); font-weight:700; margin-bottom:4px; font-size:14px; }
+  .exp-card .field input{background:#081513;border-color:var(--exp-border);}
+  .field input:focus{outline:none;border-color:var(--gold);}
+  .exp-card .field input:focus{border-color:var(--exp);}
+  .field.amount input{color:var(--gold-2);font-weight:800;direction:rtl;font-size:13px;}
+  .exp-card .field.amount input{color:var(--exp-2);}
+  .field input::placeholder{color:var(--muted);font-weight:400;font-size:11px;}
 
-  /* ---------- Buttons ---------- */
-  .btn{
-    border:none; border-radius:14px; padding:13px 18px; font-weight:700; font-size:14px;
-    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  /* Collapsed / done state */
+  .entry-card.done{padding:8px 9px;}
+  .entry-card.done .field{display:none;}
+  .entry-card.done .card-top{margin-bottom:0;}
+  .done-summary{display:none;}
+  .entry-card.done .done-summary{
+    display:flex;flex-direction:column;gap:2px;padding:2px 0 1px;
   }
-  .btn-accent{ background:linear-gradient(135deg, var(--accent), #d99a2b); color:#211603; }
-  .btn-ghost{ background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
-  .btn-danger-ghost{ background:var(--bad-dim); color:var(--bad); }
-  .btn-sm{ width:auto; padding:8px 14px; font-size:12.5px; border-radius:10px; }
+  .done-summary .ds-amount{font-size:13px;font-weight:800;color:var(--gold-2);direction:ltr;unicode-bidi:plaintext;}
+  .exp-card .done-summary .ds-amount{color:var(--exp-2);}
+  .done-summary .ds-sub{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-  /* ---------- Textarea note ---------- */
-  textarea.note{
-    width:100%; min-height:100px; resize:vertical;
-    background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-md);
-    color:var(--text); padding:12px 14px; font-size:13.5px; line-height:1.9;
-  }
-  textarea.note:focus, input:focus{ outline:2px solid var(--accent-dim); }
+  .empty{padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;border:1px dashed var(--gold-border-soft);border-radius:12px;margin-bottom:6px;}
+  .empty.exp{border-color:var(--exp-border-soft);}
 
-  /* ---------- Week grid ---------- */
-  .week-table{ width:100%; border-collapse:separate; border-spacing:0; }
-  .week-table th{ font-size:11px; color:var(--text-dimmer); font-weight:600; padding-bottom:8px; }
-  .week-table td{ text-align:center; padding:6px 2px; }
-  .week-habit-name{ text-align:right; font-size:12.5px; font-weight:700; padding:8px 4px; max-width:90px; }
-  .wcell{
-    width:24px; height:24px; border-radius:7px; margin:0 auto;
-    display:flex; align-items:center; justify-content:center; font-size:12px;
-    background:var(--surface-2); border:1px solid var(--border); color:var(--text-dimmer);
+  .save-indicator{
+    position:fixed;bottom:18px;left:18px;background:var(--panel-2);
+    border:1px solid var(--gold-dim-2);color:var(--gold-2);font-size:12px;
+    padding:8px 14px;border-radius:999px;opacity:0;transition:opacity .3s ease;
+    pointer-events:none;font-weight:700;z-index:10;
   }
-  .wcell.done{ background:var(--good-dim); color:var(--good); border-color:transparent; }
-  .wcell.missed{ background:var(--bad-dim); color:var(--bad); border-color:transparent; }
-  .wcell.future{ opacity:.3; }
-  .wcell.planned{ background:var(--accent-dim); color:var(--accent); border-color:transparent; }
-  .wcell.upcoming{ opacity:.5; border-style:dashed; }
-  .week-pct{ font-weight:800; font-size:13px; }
+  .save-indicator.show{opacity:1;}
 
-  .best-worst{ display:flex; flex-direction:column; gap:10px; }
-  .bw-item{ display:flex; align-items:center; justify-content:space-between; background:var(--surface-2); border-radius:var(--radius-sm); padding:10px 12px; }
-  .bw-item .name{ font-size:13px; font-weight:700; }
-  .bw-item .note{ font-size:11px; color:var(--text-dimmer); margin-top:2px; }
-
-  /* ---------- Month heatmap ---------- */
-  .month-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
-  .month-grid .wd{ text-align:center; font-size:10.5px; color:var(--text-dimmer); padding-bottom:4px; }
-  .mcell{
-    aspect-ratio:1; border-radius:9px; background:var(--surface-2); border:1px solid var(--border);
-    display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--text-dim); position:relative;
+  @media(max-width:360px){
+    .entries-grid{grid-template-columns:repeat(2,1fr);}
   }
-  .mcell.pad{ background:transparent; border:none; }
-  .mcell.today{ box-shadow:0 0 0 2px var(--accent) inset; }
-  .mcell[data-act="view-day-special"]{ cursor:pointer; }
-  .mcell-dot{
-    position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
-    width:5px; height:5px; border-radius:50%; background:var(--accent);
-  }
-  .week-day-strip{ display:flex; gap:6px; margin-top:10px; }
-  .wds-cell{
-    flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px;
-    background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:8px 2px;
-    font-size:11px; color:var(--text-dim); position:relative;
-  }
-  .wds-cell.today{ box-shadow:0 0 0 2px var(--accent) inset; }
-  .wds-cell[data-act="view-day-special"]{ cursor:pointer; }
-  .wds-cell .wds-dot{ width:5px; height:5px; border-radius:50%; background:var(--accent); }
-  .day-special-item{ padding:10px 4px; border-bottom:1px solid var(--border); }
-  .day-special-item:last-child{ border-bottom:none; }
-  .day-special-item .t{ font-weight:700; font-size:14px; }
-  .day-special-item .m{ font-size:12px; color:var(--text-dim); margin-top:3px; }
-
-  .dotgrid{ display:flex; flex-wrap:wrap; gap:5px; margin:10px 0 4px; }
-  .dot{ width:11px; height:11px; border-radius:3px; background:var(--surface-3); }
-  .dot.done{ background:var(--good); }
-  .dot.missed{ background:var(--bad); }
-  .dot.future{ background:var(--surface-2); opacity:.5; }
-
-  .progress-bar{ height:9px; border-radius:999px; background:var(--surface-3); overflow:hidden; margin:8px 0; }
-  .progress-bar > div{ height:100%; border-radius:999px; background:linear-gradient(90deg, var(--good), #62e0b3); }
-
-  .habit-card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-  .habit-title{ font-weight:800; font-size:15px; }
-  .habit-goal{ font-size:12.5px; color:var(--text-dim); margin-top:3px; }
-  .habit-stats-line{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-  .goal-check-row{
-    display:flex; align-items:center; gap:10px; margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);
-  }
-  .goal-check-row label{ font-size:13px; font-weight:600; color:var(--text-dim); }
-  .goal-check-row.achieved label{ color:var(--good); }
-
-  .habit-actions{ display:flex; gap:8px; margin-top:10px; }
-
-  .reward-row{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--border); }
-  .reward-row-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
-  .reward-row-label{ font-size:13px; font-weight:700; color:var(--text-dim); }
-  .reward-row-text{ font-size:13.5px; margin-bottom:10px; }
-  .btn[disabled]{ opacity:.4; cursor:not-allowed; }
-
-  /* ---------- Rewards ---------- */
-  .reward-item{ display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1px solid var(--border); }
-  .reward-item:last-child{ border-bottom:none; }
-  .reward-text{ flex:1; font-size:13.5px; }
-  .reward-text.done{ color:var(--text-dimmer); text-decoration:line-through; }
-  .x-btn{ background:none; border:none; color:var(--text-dimmer); font-size:16px; padding:4px 6px; }
-  .x-btn:hover{ color:var(--bad); }
-
-  .add-inline{ display:flex; gap:8px; margin-bottom:14px; }
-  .add-inline input{ flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:11px 14px; color:var(--text); font-size:13.5px; }
-
-  /* ---------- Bottom / Top nav ---------- */
-  .tabbar{
-    position:fixed; bottom:0; left:0; right:0; z-index:30;
-    display:flex; justify-content:center;
-    background:linear-gradient(180deg, transparent, rgba(0,0,0,.55) 30%, rgba(0,0,0,.55));
-    padding:0 0 max(10px, env(safe-area-inset-bottom)) 0;
-  }
-  .tabbar-inner{
-    display:flex; gap:2px; background:var(--surface); border:1px solid var(--border);
-    border-radius:20px; padding:6px; margin:0 16px; width:100%; max-width:730px;
-    box-shadow:0 10px 30px rgba(0,0,0,.5);
-    overflow-x:auto; scrollbar-width:none;
-  }
-  .tabbar-inner::-webkit-scrollbar{ display:none; }
-  .tab-btn{
-    flex:1 0 auto; min-width:58px; background:none; border:none; color:var(--text-dimmer);
-    display:flex; flex-direction:column; align-items:center; gap:3px;
-    padding:9px 2px; border-radius:14px; font-size:9.5px; font-weight:700; transition:.15s;
-    white-space:nowrap;
-  }
-  .tab-btn .ic{ font-size:17px; }
-  .tab-btn.active{ background:var(--surface-3); color:var(--accent); }
-
-  /* ---------- Modal ---------- */
-  .modal-overlay{
-    position:fixed; inset:0; background:rgba(6,7,10,.72); backdrop-filter:blur(3px);
-    display:flex; align-items:flex-end; justify-content:center; z-index:50;
-  }
-  .modal-overlay.hidden{ display:none; }
-  .modal{
-    background:var(--surface); border:1px solid var(--border); border-radius:22px 22px 0 0;
-    width:100%; max-width:760px; padding:22px 20px 26px; max-height:88vh; overflow-y:auto;
-    animation:slideUp .22s ease;
-  }
-  @keyframes slideUp{ from{ transform:translateY(30px); opacity:0;} to{ transform:none; opacity:1;} }
-  .modal h2{ margin:0 0 16px; font-size:17px; }
-  .field{ margin-bottom:14px; }
-  .field label{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:6px; font-weight:600; }
-  .field input{ width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; color:var(--text); font-size:14px; }
-  .field select{ width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; color:var(--text); font-size:14px; }
-  .field .hint{ font-size:11px; color:var(--text-dimmer); margin-top:5px; }
-  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
-
-  /* ---------- Special plan (برنامه خاص) ---------- */
-  .special-item{
-    display:flex; align-items:flex-start; gap:12px;
-    padding:13px 4px; border-bottom:1px solid var(--border);
-  }
-  .special-item:last-child{ border-bottom:none; }
-  .special-info{ flex:1; min-width:0; }
-  .special-title{ font-weight:700; font-size:14.5px; }
-  .special-title.checked-text{ color:var(--text-dim); text-decoration:line-through; text-decoration-color:var(--text-dimmer); }
-  .special-date{ font-size:12px; color:var(--text-dimmer); margin-top:3px; }
-  .special-actions{ display:flex; gap:6px; margin-top:8px; }
-  .time-badge{
-    display:inline-flex; align-items:center; gap:4px; margin-top:6px;
-    padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;
-    background:var(--surface-3); color:var(--text-dim);
-  }
-  .time-badge.near{ background:var(--accent-dim); color:var(--accent); animation:pulseNear 1.4s ease-in-out infinite; }
-  .time-badge.passed{ background:var(--bad-dim); color:var(--bad); }
-  @keyframes pulseNear{ 0%,100%{ opacity:1;} 50%{ opacity:.55;} }
-  .special-item.near-highlight{ background:rgba(242,184,75,.06); border-radius:12px; }
-  .field-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-  .field-row input[type="checkbox"]{ width:19px; height:19px; accent-color:var(--accent); }
-  .goal-check-list{ display:flex; flex-direction:column; gap:9px; max-height:180px; overflow-y:auto; padding:2px; }
-  .goal-check-list label{ display:flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600; color:var(--text); }
-  .goal-check-list input[type="checkbox"]{ width:19px; height:19px; min-width:19px; accent-color:var(--accent); }
-  .goal-add-row{ display:flex; gap:8px; margin-top:10px; }
-  .goal-add-row input{ flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 12px; color:var(--text); font-size:13px; }
-  .field-row label{ font-size:13.5px; font-weight:600; color:var(--text); }
-  .field input[type="date"], .field input[type="time"]{
-    width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
-    padding:12px 14px; color:var(--text); font-size:14px; direction:ltr; text-align:left;
-  }
-
-  /* ---------- Account tab ---------- */
-  .account-card-head{ display:flex; align-items:center; justify-content:space-between; }
-  .sub-days-num{ font-size:32px; font-weight:900; }
-  .sub-days-num.low{ color:var(--bad); }
-  .log-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px; }
-  .log-cell{ background:var(--surface-2); border-radius:var(--radius-sm); padding:12px; text-align:center; }
-  .log-cell .num{ font-size:20px; font-weight:900; }
-  .log-cell .lbl{ font-size:11px; color:var(--text-dimmer); margin-top:4px; }
-  .logout-row{ margin-top:16px; }
-
-  /* ---------- Lock screen (subscription expired) ---------- */
-  .lock-screen{
-    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
-  }
-  .lock-screen.hidden{ display:none; }
-  .lock-box{
-    width:100%; max-width:360px; text-align:center;
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:30px 22px; box-shadow:var(--shadow);
-  }
-  .lock-icon{ font-size:34px; margin-bottom:10px; }
-  .lock-msg-btn{
-    width:100%; border:none; border-radius:14px; padding:14px 16px; font-weight:700; font-size:13.5px;
-    background:var(--bad-dim); color:var(--bad); margin-bottom:12px; line-height:1.9; cursor:default;
-  }
-
-  @media (min-width:768px){
-    .app{ padding-bottom:26px; }
-    .tabbar{ position:sticky; top:0; background:none; padding:0; order:-1; }
-    .app{ display:flex; flex-direction:column; }
-    .topbar{ order:0; }
-    .tabbar{ order:1; margin-bottom:6px; }
-    main{ order:2; }
-    .tabbar-inner{ box-shadow:none; margin:0 0 10px; }
-    .modal-overlay{ align-items:center; }
-    .modal{ border-radius:22px; max-width:520px; }
+  @media(max-width:420px){
+    .wrap{padding:16px 10px 50px;}
+    .total-card .value{font-size:23px;}
   }
 </style>
 </head>
 <body>
-<div class="app hidden" id="appRoot">
+<div class="wrap">
 
-  <header class="topbar">
+  <div class="header">
+    <div class="dot"></div>
     <div>
-      <div class="brand-title">پلنر شخصی</div>
-      <div class="brand-date" id="headerDate">—</div>
+      <h1>دفتر واریزی‌ها و هزینه‌ها</h1>
+      <span>مقدار، از طرف کی / بابت چی، در چه تاریخی</span>
     </div>
-    <div style="display:flex;gap:8px;">
-      <button class="icon-btn" id="accountBtn" data-act="open-account" title="حساب کاربری">◐</button>
-      <button class="icon-btn" id="resetBtn" title="بازنشانی کامل داده‌ها">⟲</button>
-    </div>
-  </header>
-
-  <nav class="tabbar">
-    <div class="tabbar-inner">
-      <button class="tab-btn active" data-tab="today"><span class="ic">◎</span>امروز</button>
-      <button class="tab-btn" data-tab="week"><span class="ic">▤</span>هفتگی</button>
-      <button class="tab-btn" data-tab="month"><span class="ic">▦</span>ماهانه</button>
-      <button class="tab-btn" data-tab="habits"><span class="ic">✚</span>برنامه‌ها</button>
-      <button class="tab-btn" data-tab="goals"><span class="ic">🎯</span>اهداف</button>
-      <button class="tab-btn" data-tab="special"><span class="ic">📌</span>برنامه خاص</button>
-      <button class="tab-btn" data-tab="rewards"><span class="ic">★</span>پاداش</button>
-    </div>
-  </nav>
-
-  <main>
-    <section class="tab-panel active" id="panel-today"></section>
-    <section class="tab-panel" id="panel-week"></section>
-    <section class="tab-panel" id="panel-month"></section>
-    <section class="tab-panel" id="panel-habits"></section>
-    <section class="tab-panel" id="panel-goals"></section>
-    <section class="tab-panel" id="panel-special"></section>
-    <section class="tab-panel" id="panel-rewards"></section>
-    <section class="tab-panel" id="panel-account"></section>
-  </main>
-</div>
-
-<div class="auth-screen" id="authScreen">
-  <div class="auth-box">
-    <div class="brand-title" style="margin-bottom:4px;">پلنر شخصی</div>
-    <div class="auth-sub" id="authSub">برای استفاده وارد حساب خودت شو</div>
-    <input type="text" id="authUsername" placeholder="نام کاربری" autocomplete="username">
-    <input type="password" id="authPassword" placeholder="رمز عبور" autocomplete="current-password">
-    <div class="auth-error" id="authError"></div>
-    <button class="auth-btn primary" id="loginBtn">ورود</button>
   </div>
-</div>
 
-<div class="modal-overlay hidden" id="modalOverlay">
-  <div class="modal" id="modalBody"></div>
-</div>
-
-<div class="lock-screen hidden" id="lockScreen">
-  <div class="lock-box">
-    <div class="lock-icon">⏳</div>
-    <button class="lock-msg-btn" disabled>اشتراک شما به پایان رسید<br>برای استفاده از برنامه، اشتراک خود را مجددا شارژ کنید</button>
-    <button class="btn btn-accent" data-act="renew-subscription">تمدید اشتراک (۳۰ روز)</button>
-    <div class="dimmer" style="margin-top:14px;">اتصال به درگاه پرداخت واقعی به‌زودی — فعلاً این دکمه به‌صورت آزمایشی اشتراک را تمدید می‌کند.</div>
-    <button class="btn btn-ghost btn-sm" style="width:auto;margin-top:16px;" data-act="logout">خروج از حساب</button>
+  <div class="total-card">
+    <div class="label">مانده (واریزی منهای هزینه)</div>
+    <div class="value" id="netAmount">0 تومان</div>
+    <div class="breakdown">
+      <div class="bitem dep">
+        <div class="blabel">جمع واریزی</div>
+        <div class="bval" id="totalDep">0</div>
+      </div>
+      <div class="bitem exp">
+        <div class="blabel">جمع هزینه</div>
+        <div class="bval" id="totalExp">0</div>
+      </div>
+    </div>
   </div>
+
+  <div class="section-title dep">
+    <h2><span class="badge"></span>واریزی‌ها</h2>
+    <span class="count" id="depCount">۰ مورد</span>
+  </div>
+  <button class="add-btn dep" onclick="addEntry('dep')">+ افزودن واریزی جدید</button>
+  <div class="entries-grid" id="depList"></div>
+  <div class="empty" id="depEmpty" style="display:none;">هنوز واریزی‌ای ثبت نکردی.</div>
+
+  <div class="section-title exp">
+    <h2><span class="badge"></span>هزینه‌ها</h2>
+    <span class="count" id="expCount">۰ مورد</span>
+  </div>
+  <button class="add-btn exp" onclick="addEntry('exp')">+ افزودن هزینه جدید</button>
+  <div class="entries-grid" id="expList"></div>
+  <div class="empty exp" id="expEmpty" style="display:none;">هنوز هزینه‌ای ثبت نکردی.</div>
+
 </div>
+
+<div class="save-indicator" id="saveIndicator">ذخیره شد ✓</div>
 
 <script>
-(function(){
-  "use strict";
+const STORAGE_DEP = 'variz-tracker-entries-v1';
+const STORAGE_EXP = 'variz-tracker-expenses-v1';
 
-  /* ============================= Supabase / Cloud Storage ============================= */
-  var SUPABASE_URL = "https://suhlfgqicetqktwcymqa.supabase.co";
-  var SUPABASE_KEY = "sb_publishable_R-49m_1Ay9TLaJ8swZfRag_AYn5ktff";
-  if (typeof supabase === "undefined"){
-    console.error("[boot] supabase-js SDK did not load from CDN — check internet connection / filtering / ad-block.");
-    document.getElementById("authError").textContent = "اتصال به سرویس ابری برقرار نشد (ممکن است فیلترشکن لازم باشد). صفحه را رفرش کنید.";
-    document.getElementById("loginBtn").disabled = true;
-    return;
-  }
-  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  var TABLE = "planner_data";
-  var currentUser = null;
-  // Nothing is ever written to Supabase until this becomes true (set only after
-  // fetchState has successfully loaded — or legitimately created — this user's row).
-  // This is what actually protects existing data: if a load ever fails partway
-  // (bad connection, server hiccup, a bug in a future update, etc.) the app simply
-  // cannot save over it with an empty/incomplete local state.
-  var stateLoaded = false;
+let dep = [];
+let exp = [];
+let saveTimer = null;
 
-  var TRIAL_DAYS = 36500; // ~100 years — accounts are limited to the pre-created admins, so "unlimited" in practice
-  var RENEW_DAYS = 36500;
+function uid(){ return 'e' + Date.now() + Math.random().toString(36).slice(2,7); }
 
-  function defaultState(){
-    return {
-      habits: [],
-      rewards: [],
-      notes: {},
-      specialPlans: [],
-      goals: [],
-      account: { subscriptionEnd: addDaysISO(todayISO(), TRIAL_DAYS), username: null }
-    };
-  }
+function fmtToman(n){
+  n = Math.round(n || 0);
+  return n.toLocaleString('en-US') + ' تومان';
+}
+function fmtNum(n){
+  n = Math.round(n || 0);
+  return n.toLocaleString('en-US');
+}
+function digitsToFa(str){
+  const fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  return String(str).replace(/[0-9]/g, d => fa[d]);
+}
+function normalizeDigits(str){
+  const fa = '۰۱۲۳۴۵۶۷۸۹';
+  const ar = '٠١٢٣٤٥٦٧٨٩';
+  return String(str).replace(/[۰-۹]/g, d => fa.indexOf(d)).replace(/[٠-٩]/g, d => ar.indexOf(d));
+}
+function formatAmountInput(raw){
+  const digits = normalizeDigits(raw).replace(/[^\d]/g, '');
+  if(!digits) return '';
+  return Number(digits).toLocaleString('en-US');
+}
+function parseAmount(raw){
+  const digits = normalizeDigits(raw).replace(/[^\d]/g, '');
+  return digits ? Number(digits) : 0;
+}
 
-  // Shows a visible on-screen warning when a save to Supabase fails, so failures
-  // (missing RLS policy, missing unique constraint, network issue, etc.) are never
-  // silently invisible — previously these only went to console.error and looked
-  // like "delete/edit came back after refresh" with no clue why.
-  function showSaveError(err){
-    console.error("save error", err);
-    var el = document.getElementById("saveErrorToast");
-    if(!el){
-      el = document.createElement("div");
-      el.id = "saveErrorToast";
-      el.style.cssText = "position:fixed;bottom:100px;left:16px;right:16px;max-width:520px;margin:0 auto;background:#4a2321;color:#f0605a;border:1px solid #f0605a;border-radius:14px;padding:12px 16px;font-size:12.5px;line-height:1.7;z-index:200;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4);";
-      document.body.appendChild(el);
-    }
-    el.textContent = "❌ ذخیره‌سازی ناموفق بود — این تغییر با رفرش از بین می‌رود. خطا: " + (err && err.message ? err.message : "نامشخص");
-    el.style.display = "block";
-    clearTimeout(showSaveError._t);
-    showSaveError._t = setTimeout(function(){ el.style.display = "none"; }, 7000);
-  }
+function getStore(kind){ return kind === 'dep' ? dep : exp; }
+function setStore(kind, arr){ if(kind === 'dep') dep = arr; else exp = arr; }
+function storageKey(kind){ return kind === 'dep' ? STORAGE_DEP : STORAGE_EXP; }
 
-  // Writes the whole state to Supabase right away. Used for every structural change
-  // (add/edit/delete/toggle) so that refreshing immediately after an action can never
-  // race ahead of the save (this was the cause of edits/deletes "coming back" on refresh).
-  function doSave(){
-    if(!currentUser || !stateLoaded) return null;
-    return sb.from(TABLE).upsert({
-      user_id: currentUser.id,
-      data: state,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "user_id" }).then(function(res){
-      if(res.error) showSaveError(res.error);
-    }).catch(function(err){ showSaveError(err); });
-  }
-  function saveState(){
-    doSave();
-  }
-  // Debounced save — only for the note textarea, so typing doesn't fire a network
-  // request per keystroke. Flushed immediately on page unload as a safety net.
-  var noteSaveTimer = null;
-  function saveNoteDebounced(){
-    clearTimeout(noteSaveTimer);
-    noteSaveTimer = setTimeout(function(){ noteSaveTimer = null; doSave(); }, 500);
-  }
-  window.addEventListener("beforeunload", function(){
-    if (noteSaveTimer){ clearTimeout(noteSaveTimer); noteSaveTimer = null; doSave(); }
+function loadData(){
+  try{
+    const rawDep = localStorage.getItem(STORAGE_DEP);
+    if(rawDep) dep = JSON.parse(rawDep);
+  }catch(e){ dep = []; }
+  if(!Array.isArray(dep)) dep = [];
+  dep.forEach(en => {
+    if(en.amount === undefined) en.amount = 0;
+    if(en.from === undefined) en.from = '';
+    if(en.date === undefined) en.date = '';
+    if(en.done === undefined) en.done = false;
   });
 
-  // Loads (or creates) this user's row from Supabase and populates the existing
-  // `state` object in place, so every closure that already captured `state` still
-  // points at the right data.
-  function fetchState(){
-    stateLoaded = false;
-    return sb.from(TABLE).select("data").eq("user_id", currentUser.id).maybeSingle()
-      .then(function(res){
-        if(res.error){ showSaveError(res.error); throw res.error; }
-        var loaded = (res.data && res.data.data) ? res.data.data : null;
-        if(!loaded){
-          loaded = defaultState();
-          return sb.from(TABLE).insert({ user_id: currentUser.id, data: loaded }).then(function(insRes){
-            if(insRes.error){ showSaveError(insRes.error); throw insRes.error; }
-            applyState(loaded);
-            stateLoaded = true;
-          });
-        }
-        if(!loaded.habits) loaded.habits = [];
-        if(!loaded.rewards) loaded.rewards = [];
-        if(!loaded.notes) loaded.notes = {};
-        if(!loaded.specialPlans) loaded.specialPlans = [];
-        if(!loaded.goals) loaded.goals = [];
-        if(!loaded.account) loaded.account = { subscriptionEnd: addDaysISO(todayISO(), TRIAL_DAYS), username: null };
-        if(!loaded.account.subscriptionEnd) loaded.account.subscriptionEnd = addDaysISO(todayISO(), TRIAL_DAYS);
-        if(loaded.account.username === undefined) loaded.account.username = null;
-
-        // Migrate to goalIds[] (a habit can now have multiple goals, or none):
-        // - very old free-text habit.goal -> matched/created goal record
-        // - previous single habit.goalId -> goalIds:[goalId]
-        // No duplicate goal records are created: matching is done by title.
-        var migrated = false;
-        loaded.habits.forEach(function(h){
-          if(h.goalIds === undefined) h.goalIds = [];
-          if(h.goal){
-            var title = String(h.goal).trim();
-            if(title){
-              var match = loaded.goals.find(function(g){ return g.title === title; });
-              if(!match){
-                match = { id: uid(), title: title, targetDate: null, createdAt: todayISO() };
-                loaded.goals.push(match);
-              }
-              if(h.goalIds.indexOf(match.id) === -1) h.goalIds.push(match.id);
-              migrated = true;
-            }
-          }
-          if(h.goal !== undefined){ delete h.goal; migrated = true; }
-          if(h.goalId){
-            if(h.goalIds.indexOf(h.goalId) === -1) h.goalIds.push(h.goalId);
-            migrated = true;
-          }
-          if(h.goalId !== undefined){ delete h.goalId; migrated = true; }
-        });
-
-        applyState(loaded);
-        stateLoaded = true;
-        if(migrated) doSave();
-      });
-  }
-
-  function applyState(loaded){
-    state.habits = loaded.habits;
-    state.rewards = loaded.rewards;
-    state.notes = loaded.notes;
-    state.specialPlans = loaded.specialPlans;
-    state.goals = loaded.goals;
-    state.account = loaded.account;
-  }
-
-  var state = defaultState();
-
-  /* ============================= Auth ============================= */
-  var authScreen = document.getElementById("authScreen");
-  var appRoot = document.getElementById("appRoot");
-  var authUsername = document.getElementById("authUsername");
-  var authPassword = document.getElementById("authPassword");
-  var authError = document.getElementById("authError");
-  var authSub = document.getElementById("authSub");
-
-  function showApp(){
-    authScreen.classList.add("hidden");
-    appRoot.classList.remove("hidden");
-  }
-
-  /* ============================= Subscription ============================= */
-  function daysRemaining(){
-    if(!state.account || !state.account.subscriptionEnd) return 0;
-    return diffDaysISO(todayISO(), state.account.subscriptionEnd);
-  }
-  function isSubscriptionExpired(){
-    return daysRemaining() < 0;
-  }
-  function checkLockState(){
-    var lockScreen = document.getElementById("lockScreen");
-    var expired = isSubscriptionExpired();
-    lockScreen.classList.toggle("hidden", !expired);
-    appRoot.classList.toggle("hidden", expired);
-  }
-  function renewSubscription(){
-    // TODO: در آینده به‌جای تمدید محلی، کاربر باید به درگاه پرداخت واقعی (مثلاً زرین‌پال)
-    // هدایت بشه و بعد از تأیید پرداخت، این تاریخ سمت سرور (نه کلاینت) آپدیت بشه.
-    var base = isSubscriptionExpired() ? todayISO() : state.account.subscriptionEnd;
-    state.account.subscriptionEnd = addDaysISO(base, RENEW_DAYS);
-    saveState();
-    checkLockState();
-    renderAll();
-  }
-  function showAuth(msg){
-    appRoot.classList.add("hidden");
-    document.getElementById("lockScreen").classList.add("hidden");
-    authScreen.classList.remove("hidden");
-    authError.textContent = msg || "";
-  }
-  function setAuthBusy(busy){
-    document.getElementById("loginBtn").disabled = busy;
-    authSub.textContent = busy ? "در حال ارتباط..." : "برای استفاده وارد حساب خودت شو";
-  }
-
-  // Usernames aren't a native Supabase Auth concept, so we keep a small public-readable
-  // mapping table (admin_usernames: username -> email) and sign in with the email behind
-  // the scenes. There is no sign-up flow — only the pre-created admin accounts can log in.
-  document.getElementById("loginBtn").addEventListener("click", function(){
-    var username = authUsername.value.trim(), pass = authPassword.value;
-    if(!username || !pass){ authError.textContent = "نام کاربری و رمز عبور رو وارد کن"; return; }
-    setAuthBusy(true);
-    authError.textContent = "";
-    sb.from("admin_usernames").select("email").eq("username", username).maybeSingle().then(function(res){
-      if(res.error){
-        console.error("[login] admin_usernames lookup failed:", res.error);
-        setAuthBusy(false);
-        authError.textContent = "خطای اتصال به سرور — جزئیات دقیق توی کنسول مرورگر (F12) هست";
-        return;
-      }
-      if(!res.data){
-        console.warn("[login] no admin_usernames row found for username:", username);
-        setAuthBusy(false);
-        authError.textContent = "نام کاربری یا رمز عبور اشتباه است";
-        return;
-      }
-      sb.auth.signInWithPassword({ email: res.data.email, password: pass }).then(function(r){
-        setAuthBusy(false);
-        if(r.error){
-          console.error("[login] signInWithPassword failed:", r.error);
-          if(/invalid login credentials/i.test(r.error.message || "")){
-            authError.textContent = "نام کاربری یا رمز عبور اشتباه است";
-          } else {
-            authError.textContent = "خطا: " + r.error.message + " (جزئیات بیشتر توی کنسول)";
-          }
-          return;
-        }
-        onAuthed(r.data.user, username);
-      });
-    });
+  try{
+    const rawExp = localStorage.getItem(STORAGE_EXP);
+    if(rawExp) exp = JSON.parse(rawExp);
+  }catch(e){ exp = []; }
+  if(!Array.isArray(exp)) exp = [];
+  exp.forEach(en => {
+    if(en.amount === undefined) en.amount = 0;
+    if(en.from === undefined) en.from = '';
+    if(en.date === undefined) en.date = '';
+    if(en.done === undefined) en.done = false;
   });
 
-  function doLogout(){
-    sb.auth.signOut().then(function(){
-      currentUser = null;
-      stateLoaded = false;
-      state = defaultState();
-      showAuth();
-    });
-  }
+  render();
+}
 
-  function onAuthed(user, username){
-    currentUser = user;
-    fetchState().then(function(){
-      if(username && state.account.username !== username){
-        state.account.username = username;
-        doSave();
-      }
-      showApp();
-      checkLockState();
-      renderAll();
-      startTimeWatcher();
-    }).catch(function(err){
-      // Loading this user's data from Supabase failed partway through. Do NOT show
-      // the app in this case — the in-memory `state` may still be an empty default,
-      // and any action the person takes would call saveState() and overwrite their
-      // real cloud data with that empty state. Instead, sign out and send them back
-      // to the login screen so a retry starts clean.
-      stateLoaded = false;
-      sb.auth.signOut().finally(function(){
-        currentUser = null;
-        showAuth("بارگذاری اطلاعات از سرور ناموفق بود — اتصال اینترنت را بررسی کن و دوباره وارد شو. (چیزی از داده‌هات پاک نشده) خطا: " + (err && err.message ? err.message : "نامشخص"));
-      });
-    });
+function saveData(kind){
+  try{
+    localStorage.setItem(storageKey(kind), JSON.stringify(getStore(kind)));
+    const ind = document.getElementById('saveIndicator');
+    ind.classList.add('show');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=> ind.classList.remove('show'), 1200);
+  }catch(e){
+    console.error('storage error', e);
   }
+}
 
-  sb.auth.getSession().then(function(res){
-    var session = res.data && res.data.session;
-    if(session && session.user){
-      onAuthed(session.user);
-    } else {
-      showAuth();
-    }
+function addEntry(kind){
+  getStore(kind).unshift({id: uid(), amount: 0, from: '', date: '', done: false});
+  render();
+  saveData(kind);
+}
+
+function removeEntry(kind, id){
+  setStore(kind, getStore(kind).filter(en => en.id !== id));
+  render();
+  saveData(kind);
+}
+
+function updateEntryField(kind, id, field, value){
+  const en = getStore(kind).find(en => en.id === id);
+  if(!en) return;
+  if(field === 'amount'){
+    en.amount = parseAmount(value);
+  }else if(field === 'from'){
+    en.from = value;
+  }else if(field === 'date'){
+    en.date = value;
+  }
+  render();
+  saveData(kind);
+}
+
+function toggleDone(kind, id){
+  const en = getStore(kind).find(en => en.id === id);
+  if(!en) return;
+  en.done = !en.done;
+  render();
+  saveData(kind);
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function renderList(kind){
+  const listId = kind === 'dep' ? 'depList' : 'expList';
+  const emptyId = kind === 'dep' ? 'depEmpty' : 'expEmpty';
+  const countId = kind === 'dep' ? 'depCount' : 'expCount';
+  const fromPlaceholder = kind === 'dep' ? 'نام' : 'بابت چی';
+  const items = getStore(kind);
+
+  const list = document.getElementById(listId);
+  const emptyMsg = document.getElementById(emptyId);
+  list.innerHTML = '';
+  emptyMsg.style.display = items.length === 0 ? 'block' : 'none';
+  document.getElementById(countId).textContent = digitsToFa(items.length) + ' مورد';
+
+  let total = 0;
+
+  items.forEach(en => {
+    total += (en.amount || 0);
+
+    const card = document.createElement('div');
+    card.className = 'entry-card' + (kind === 'exp' ? ' exp-card' : '') + (en.done ? ' done' : '');
+    card.innerHTML =
+      '<div class="card-top">' +
+        '<div class="tick' + (en.done ? ' on' : '') + '" data-role="tick">' + (en.done ? '✓' : '') + '</div>' +
+        '<button class="del-btn" type="button" data-role="del">×</button>' +
+      '</div>' +
+      '<div class="done-summary">' +
+        '<span class="ds-amount">' + fmtNum(en.amount) + '</span>' +
+        '<span class="ds-sub">' + escapeHtml(en.from || fromPlaceholder) + (en.date ? ' · ' + escapeHtml(en.date) : '') + '</span>' +
+      '</div>' +
+      '<div class="field amount">' +
+        '<input type="text" inputmode="numeric" placeholder="مبلغ" value="' + (en.amount ? fmtNum(en.amount) : '') + '" data-field="amount">' +
+      '</div>' +
+      '<div class="field">' +
+        '<input type="text" placeholder="' + fromPlaceholder + '" value="' + escapeHtml(en.from) + '" data-field="from">' +
+      '</div>' +
+      '<div class="field">' +
+        '<input type="text" placeholder="تاریخ" value="' + escapeHtml(en.date) + '" data-field="date">' +
+      '</div>';
+
+    const amountInput = card.querySelector('[data-field="amount"]');
+    amountInput.addEventListener('input', (e) => {
+      e.target.value = formatAmountInput(e.target.value);
+    });
+    amountInput.addEventListener('change', (e) => updateEntryField(kind, en.id, 'amount', e.target.value));
+    card.querySelector('[data-field="from"]').addEventListener('change', (e) => updateEntryField(kind, en.id, 'from', e.target.value));
+    card.querySelector('[data-field="date"]').addEventListener('change', (e) => updateEntryField(kind, en.id, 'date', e.target.value));
+    card.querySelector('[data-role="tick"]').addEventListener('click', () => toggleDone(kind, en.id));
+    card.querySelector('[data-role="del"]').addEventListener('click', () => removeEntry(kind, en.id));
+
+    list.appendChild(card);
   });
 
-  /* ============================= Date helpers ============================= */
-  function pad(n){ return n<10 ? "0"+n : ""+n; }
-  function toISO(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
-  function todayISO(){ return toISO(new Date()); }
-  function isoToDate(iso){ var p = iso.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); }
-  function addDaysISO(iso, n){ var d = isoToDate(iso); d.setDate(d.getDate()+n); return toISO(d); }
-  function diffDaysISO(a,b){ return Math.round((isoToDate(b) - isoToDate(a)) / 86400000); }
-  function isFuture(iso){ return diffDaysISO(todayISO(), iso) > 0; }
-
-  var WEEKDAY_FA = ["یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه","شنبه"]; // JS getDay: 0..6
-  var WEEKDAY_FA_SHORT = ["ی","د","س","چ","پ","ج","ش"];
-  // Order starting Saturday for week view: Sat, Sun, Mon, Tue, Wed, Thu, Fri
-  var WEEK_ORDER = [6,0,1,2,3,4,5];
-
-  function weekdayName(iso){ return WEEKDAY_FA[isoToDate(iso).getDay()]; }
-
-  /* Gregorian -> Jalali conversion (standard public-domain algorithm) */
-  function gregorianToJalali(gy, gm, gd){
-    var g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
-    var jy;
-    gy = parseInt(gy,10); gm = parseInt(gm,10); gd = parseInt(gd,10);
-    jy = (gy <= 1600) ? 0 : 979;
-    gy -= (gy <= 1600) ? 621 : 1600;
-    var gy2 = (gm > 2) ? (gy + 1) : gy;
-    var days = (365*gy) + parseInt((gy2+3)/4,10) - parseInt((gy2+99)/100,10) + parseInt((gy2+399)/400,10) - 80 + gd + g_d_m[gm-1];
-    jy += 33 * parseInt(days/12053,10);
-    days %= 12053;
-    jy += 4 * parseInt(days/1461,10);
-    days %= 1461;
-    if (days > 365){
-      jy += parseInt((days-1)/365,10);
-      days = (days-1) % 365;
-    }
-    var jm = (days < 186) ? 1 + parseInt(days/31,10) : 7 + parseInt((days-186)/30,10);
-    var jd = 1 + ((days < 186) ? (days % 31) : ((days-186) % 30));
-    return [jy, jm, jd];
-  }
-  /* Jalali -> Gregorian conversion (inverse of the above, standard public-domain algorithm) */
-  function jalaliToGregorian(jy, jm, jd){
-    jy = parseInt(jy,10); jm = parseInt(jm,10); jd = parseInt(jd,10);
-    var gy;
-    jy += 1595;
-    var days = -355668 + (365*jy) + (parseInt(jy/33,10)*8) + parseInt(((jy%33)+3)/4,10) + jd + ((jm<7) ? (jm-1)*31 : ((jm-7)*30)+186);
-    gy = 400 * parseInt(days/146097,10);
-    days %= 146097;
-    if (days > 36524){
-      gy += 100 * parseInt(--days/36524,10);
-      days %= 36524;
-      if (days >= 365) days++;
-    }
-    gy += 4 * parseInt(days/1461,10);
-    days %= 1461;
-    if (days > 365){
-      gy += parseInt((days-1)/365,10);
-      days = (days-1) % 365;
-    }
-    var gd = days + 1;
-    var sal_a = [0,31,(((gy%4===0)&&(gy%100!==0))||(gy%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
-    var gm;
-    for (gm=1; gm<=12; gm++){
-      if (gd <= sal_a[gm]) break;
-      gd -= sal_a[gm];
-    }
-    return [gy, gm, gd];
-  }
-  function isLeapJalaliYear(jy){
-    var breaks = [1,5,9,13,17,22,26,30];
-    var r = ((jy % 33) + 33) % 33;
-    for (var i=0;i<breaks.length;i++){ if (r === breaks[i]) return true; }
-    return false;
-  }
-  function jalaliMonthLength(jy, jm){
-    if (jm <= 6) return 31;
-    if (jm <= 11) return 30;
-    return isLeapJalaliYear(jy) ? 30 : 29;
-  }
-  function jalaliToISO(jy, jm, jd){
-    var g = jalaliToGregorian(jy, jm, jd);
-    return toISO(new Date(g[0], g[1]-1, g[2]));
-  }
-  var JMONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
-  var FA_DIGITS = ["۰","۱","۲","۳","۴","۵","۶","۷","۸","۹"];
-  function faNum(n){ return String(n).replace(/[0-9]/g, function(d){ return FA_DIGITS[+d]; }); }
-  function jalaliOf(iso){
-    var d = isoToDate(iso);
-    var j = gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate());
-    return { y:j[0], m:j[1], d:j[2] };
-  }
-  function jalaliLongDate(iso){
-    var j = jalaliOf(iso);
-    return weekdayName(iso) + "، " + faNum(j.d) + " " + JMONTHS[j.m-1] + " " + faNum(j.y);
-  }
-  function jalaliShort(iso){
-    var j = jalaliOf(iso);
-    return faNum(j.d) + " " + JMONTHS[j.m-1];
-  }
-
-  function uid(){ return "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,8); }
-  function escapeHtml(s){
-    return (s==null?"":String(s)).replace(/[&<>"']/g, function(c){
-      return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
-    });
-  }
-  function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
-
-  /* ============================= Habit computations ============================= */
-  // A habit is "applicable" (shown/toggleable) on any date from its startDate onward,
-  // including future dates in the current month/week — so newly added habits show
-  // everywhere right away instead of waiting for "today" to reach that date.
-  function isApplicable(habit, iso){
-    return diffDaysISO(habit.startDate, iso) >= 0;
-  }
-  // A day only "counts" toward stats/percentages once it has actually happened.
-  function isCountable(habit, iso){
-    return isApplicable(habit, iso) && !isFuture(iso);
-  }
-  function isDone(habit, iso){ return !!habit.completions[iso]; }
-
-  function habitStats(habit){
-    var elapsed = diffDaysISO(habit.startDate, todayISO()) + 1;
-    if (elapsed < 1) elapsed = 1;
-    var completed = 0;
-    for (var iso in habit.completions){
-      if (habit.completions[iso] && diffDaysISO(habit.startDate, iso) >= 0 && diffDaysISO(iso, todayISO()) >= 0){
-        completed++;
-      }
-    }
-    var target = habit.targetDays || 30;
-    var progressPct = clamp(Math.round((completed / target) * 100), 0, 100);
-    var missed = Math.max(elapsed - completed, 0);
-    var negativePct = clamp(Math.round((missed / elapsed) * 100), 0, 100);
-    return { elapsed: elapsed, completed: completed, target: target, progressPct: progressPct, negativePct: negativePct, missed: missed };
-  }
-
-  /* ============================= Goal computations ============================= */
-  function habitGoalTitles(h){
-    return (h.goalIds||[]).map(function(id){
-      var g = state.goals.find(function(x){ return x.id===id; });
-      return g ? g.title : null;
-    }).filter(function(t){ return !!t; });
-  }
-  // Aggregates progress across every habit linked to a goal: sums each habit's
-  // completed days over its target days, so the goal's bar reflects combined
-  // progress of all programs tied to it (not just a single habit). A habit with
-  // several goals contributes to each of those goals' progress.
-  function goalStats(goal){
-    var linked = state.habits.filter(function(h){ return (h.goalIds||[]).indexOf(goal.id) !== -1; });
-    var sumCompleted = 0, sumTarget = 0, achievedCount = 0;
-    linked.forEach(function(h){
-      var st = habitStats(h);
-      sumCompleted += st.completed;
-      sumTarget += st.target;
-      if (h.goalAchieved) achievedCount++;
-    });
-    var pct = sumTarget ? clamp(Math.round((sumCompleted/sumTarget)*100), 0, 100) : 0;
-    return { linked: linked, pct: pct, achievedCount: achievedCount, total: linked.length };
-  }
-
-  function habitWeekStats(habit, weekDates){
-    var countableDates = weekDates.filter(function(iso){ return isCountable(habit, iso); });
-    var doneCount = countableDates.filter(function(iso){ return isDone(habit, iso); }).length;
-    var pct = countableDates.length ? Math.round((doneCount/countableDates.length)*100) : null;
-    var missedNames = countableDates.filter(function(iso){ return !isDone(habit, iso); }).map(weekdayName);
-    return { applicable: countableDates.length, done: doneCount, pct: pct, missedNames: missedNames };
-  }
-
-  /* ============================= Navigation state ============================= */
-  var currentTab = "today";
-  var viewedDayISO = todayISO();
-  var weekOffset = 0;   // 0 = current week
-  var monthOffset = 0;  // 0 = current month
-
-  function currentWeekDates(){
-    var base = new Date();
-    base.setDate(base.getDate() + weekOffset*7);
-    var jsDay = base.getDay(); // 0..6, week starts Saturday(6)
-    var deltaToSaturday = (jsDay - 6 + 7) % 7;
-    var saturday = new Date(base);
-    saturday.setDate(base.getDate() - deltaToSaturday);
-    var dates = [];
-    for (var i=0;i<7;i++){
-      var d = new Date(saturday); d.setDate(saturday.getDate()+i);
-      dates.push(toISO(d));
-    }
-    return dates;
-  }
-
-  function currentJalaliMonthInfo(){
-    var j = jalaliOf(todayISO());
-    var totalMonths = (j.y*12 + (j.m-1)) + monthOffset;
-    var jy = Math.floor(totalMonths/12);
-    var jm = (((totalMonths%12)+12)%12) + 1;
-    var daysInMonth = jalaliMonthLength(jy, jm);
-    var firstISO = jalaliToISO(jy, jm, 1);
-    var firstWeekday = isoToDate(firstISO).getDay(); // 0..6, Saturday=6
-    return { jy:jy, jm:jm, daysInMonth:daysInMonth, firstISO:firstISO, firstWeekday:firstWeekday };
-  }
-
-  /* ============================= Rendering ============================= */
-  function renderAll(){
-    var jToday = jalaliOf(todayISO());
-    document.getElementById("headerDate").innerHTML =
-      weekdayName(todayISO()) + "، " + faNum(jToday.d) + " " + JMONTHS[jToday.m-1] + " <b>" + faNum(jToday.y) + "</b>";
-    renderToday();
-    renderWeek();
-    renderMonth();
-    renderHabits();
-    renderGoals();
-    renderSpecial();
-    renderRewards();
-    renderAccount();
-  }
-
-  /* ============================= Special plan (date-specific) helpers ============================= */
-  function sortedSpecialPlans(){
-    return state.specialPlans.slice().sort(function(a,b){
-      var da = a.date + (a.timeEnabled && a.time ? " "+a.time : " 00:00");
-      var db = b.date + (b.timeEnabled && b.time ? " "+b.time : " 00:00");
-      return da < db ? -1 : (da > db ? 1 : 0);
-    });
-  }
-
-  // Returns: null (no time set), "near" (within 30 min before/at target), "passed" (time already gone), "future" (more than 30 min away)
-  function planTimeStatus(plan){
-    if (!plan.timeEnabled || !plan.time || plan.date !== todayISO()) return null;
-    var now = new Date();
-    var parts = plan.time.split(":");
-    var target = new Date();
-    target.setHours(parseInt(parts[0],10), parseInt(parts[1],10), 0, 0);
-    var diffMin = (target - now) / 60000;
-    if (diffMin < -1) return "passed";
-    if (diffMin <= 30) return "near";
-    return "future";
-  }
-
-  function planTimeBadge(plan){
-    if (!plan.timeEnabled || !plan.time) return "";
-    var status = planTimeStatus(plan);
-    var cls = status === "near" ? "near" : (status === "passed" ? "passed" : "");
-    var label = plan.time.replace(":", ":");
-    var extra = status === "near" ? " ⏰ نزدیکه" : (status === "passed" ? " · گذشت" : "");
-    return '<span class="time-badge '+cls+'">🕒 '+label+extra+'</span>';
-  }
-
-  /* ---------- SPECIAL PLANS (manage) ---------- */
-  function renderSpecial(){
-    var el = document.getElementById("panel-special");
-    var html = "";
-    html += '<button class="btn btn-accent" data-act="open-add-special" style="margin-bottom:16px;">＋ افزودن برنامه خاص</button>';
-    html += '<div class="dimmer" style="margin-bottom:14px;">اینجا می‌تونی برای یک تاریخ خاص (نه تکرارشونده) یک کار ثبت کنی؛ اختیاری می‌تونی ساعت مشخصی هم براش بذاری.</div>';
-
-    var plans = sortedSpecialPlans();
-    if (!plans.length){
-      html += '<div class="card"><div class="empty-state"><div class="e-icon">📌</div><div class="e-title">هنوز برنامه خاصی ثبت نشده</div></div></div>';
-    } else {
-      html += '<div class="card">';
-      plans.forEach(function(p){
-        var status = planTimeStatus(p);
-        html += '<div class="special-item '+(status==="near"?"near-highlight":"")+'">';
-        html += '  <button class="check '+(p.done?'checked':'')+'" data-act="toggle-special" data-id="'+p.id+'">'+(p.done?'✓':'')+'</button>';
-        html += '  <div class="special-info">';
-        html += '    <div class="special-title '+(p.done?'checked-text':'')+'">'+escapeHtml(p.title)+'</div>';
-        html += '    <div class="special-date">'+jalaliLongDate(p.date)+'</div>';
-        html += '    '+planTimeBadge(p);
-        html += '    <div class="special-actions">';
-        html += '      <button class="btn btn-ghost btn-sm" data-act="edit-special" data-id="'+p.id+'">ویرایش</button>';
-        html += '      <button class="btn btn-danger-ghost btn-sm" data-act="delete-special" data-id="'+p.id+'">حذف</button>';
-        html += '    </div>';
-        html += '  </div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
-    el.innerHTML = html;
-  }
-
-  function jalaliDayOptionsHtml(selectedDay, maxDay){
-    var html = "";
-    for (var d=1; d<=maxDay; d++){
-      html += '<option value="'+d+'" '+(d===selectedDay?"selected":"")+'>'+faNum(d)+'</option>';
-    }
-    return html;
-  }
-  function jalaliMonthOptionsHtml(selectedMonth){
-    var html = "";
-    JMONTHS.forEach(function(name, idx){
-      var m = idx+1;
-      html += '<option value="'+m+'" '+(m===selectedMonth?"selected":"")+'>'+name+'</option>';
-    });
-    return html;
-  }
-
-  function openSpecialModal(existingId){
-    var existing = existingId ? state.specialPlans.find(function(p){ return p.id===existingId; }) : null;
-    var overlay = document.getElementById("modalOverlay");
-    var body = document.getElementById("modalBody");
-    var baseJ = existing ? jalaliOf(existing.date) : jalaliOf(todayISO());
-
-    var html = "";
-    html += '<h2>'+(existing? 'ویرایش برنامه خاص' : 'افزودن برنامه خاص')+'</h2>';
-    html += '<div class="field"><label>عنوان</label><input type="text" id="mSpecialTitle" placeholder="مثلاً: ویزیت دکتر" value="'+(existing? escapeHtml(existing.title):"")+'"></div>';
-    html += '<div class="field"><label>تاریخ (شمسی)</label>';
-    html += '  <div style="display:flex;gap:8px;">';
-    html += '    <select id="mSpecialDay" style="flex:.8;">'+jalaliDayOptionsHtml(baseJ.d, jalaliMonthLength(baseJ.y, baseJ.m))+'</select>';
-    html += '    <select id="mSpecialMonth" style="flex:1.6;">'+jalaliMonthOptionsHtml(baseJ.m)+'</select>';
-    html += '    <input type="number" id="mSpecialYear" style="flex:1;" value="'+baseJ.y+'">';
-    html += '  </div>';
-    html += '</div>';
-    html += '<div class="field-row"><input type="checkbox" id="mSpecialTimeEnabled" '+(existing && existing.timeEnabled ? "checked":"")+'><label for="mSpecialTimeEnabled">ساعت مشخصی داره</label></div>';
-    html += '<div class="field" id="mSpecialTimeField" style="'+(existing && existing.timeEnabled ? "" : "display:none;")+'">';
-    html += '  <label>ساعت</label><input type="time" id="mSpecialTime" value="'+(existing && existing.time ? existing.time : "09:00")+'">';
-    html += '  <div class="hint">وقتی این برنامه بازه و به ساعتش نزدیک بشی، رنگش تغییر می‌کنه و در صورت اجازه، نوتیفیکیشن می‌گیری (فقط وقتی برنامه باز باشه).</div>';
-    html += '</div>';
-    html += '<div class="modal-actions">';
-    html += '  <button class="btn btn-ghost" data-act="close-modal">انصراف</button>';
-    html += '  <button class="btn btn-accent" data-act="save-special" data-id="'+(existing? existing.id : "")+'">ذخیره</button>';
-    html += '</div>';
-
-    body.innerHTML = html;
-    overlay.classList.remove("hidden");
-
-    var cb = document.getElementById("mSpecialTimeEnabled");
-    cb.addEventListener("change", function(){
-      document.getElementById("mSpecialTimeField").style.display = cb.checked ? "" : "none";
-      if (cb.checked) ensureNotifyPermission();
-    });
-
-    function refreshDayOptions(){
-      var m = parseInt(document.getElementById("mSpecialMonth").value, 10);
-      var y = parseInt(document.getElementById("mSpecialYear").value, 10) || baseJ.y;
-      var daySelect = document.getElementById("mSpecialDay");
-      var currentDay = parseInt(daySelect.value, 10) || 1;
-      var maxDay = jalaliMonthLength(y, m);
-      if (currentDay > maxDay) currentDay = maxDay;
-      daySelect.innerHTML = jalaliDayOptionsHtml(currentDay, maxDay);
-    }
-    document.getElementById("mSpecialMonth").addEventListener("change", refreshDayOptions);
-    document.getElementById("mSpecialYear").addEventListener("change", refreshDayOptions);
-  }
-
-  function saveSpecialFromModal(existingId){
-    var title = document.getElementById("mSpecialTitle").value.trim();
-    var day = parseInt(document.getElementById("mSpecialDay").value, 10);
-    var month = parseInt(document.getElementById("mSpecialMonth").value, 10);
-    var year = parseInt(document.getElementById("mSpecialYear").value, 10);
-    var timeEnabled = document.getElementById("mSpecialTimeEnabled").checked;
-    var time = timeEnabled ? document.getElementById("mSpecialTime").value : null;
-    if (!title){ document.getElementById("mSpecialTitle").focus(); return; }
-    if (!year || year < 1200 || year > 1600 || !month || !day){ document.getElementById("mSpecialYear").focus(); return; }
-    var date = jalaliToISO(year, month, day);
-
-    if (existingId){
-      var p = state.specialPlans.find(function(x){ return x.id===existingId; });
-      if (p){ p.title = title; p.date = date; p.timeEnabled = timeEnabled; p.time = time; }
-    } else {
-      state.specialPlans.push({
-        id: uid(), title: title, date: date, timeEnabled: timeEnabled, time: time,
-        done: false, notifiedAt: null
-      });
-    }
-    saveState();
-    closeModal();
-    renderAll();
-  }
-
-  function openDaySpecialModal(iso){
-    var overlay = document.getElementById("modalOverlay");
-    var body = document.getElementById("modalBody");
-    var plans = state.specialPlans.filter(function(p){ return p.date === iso; })
-      .sort(function(a,b){
-        var ta = a.timeEnabled && a.time ? a.time : "00:00";
-        var tb = b.timeEnabled && b.time ? b.time : "00:00";
-        return ta < tb ? -1 : (ta > tb ? 1 : 0);
-      });
-    var html = "";
-    html += '<h2>'+jalaliLongDate(iso)+'</h2>';
-    if (!plans.length){
-      html += '<div class="dimmer">برنامه خاصی برای این روز ثبت نشده</div>';
-    } else {
-      plans.forEach(function(p){
-        html += '<div class="day-special-item">';
-        html += '  <div class="t">📌 '+escapeHtml(p.title)+'</div>';
-        if (p.timeEnabled && p.time){
-          html += '  <div class="m">🕒 در ساعت '+p.time+' باید این کار رو انجام بدی</div>';
-        } else {
-          html += '  <div class="m">برنامه‌ی این روز — بدون ساعت مشخص</div>';
-        }
-        html += '</div>';
-      });
-    }
-    html += '<div class="modal-actions"><button class="btn btn-ghost" data-act="close-modal">بستن</button></div>';
-    body.innerHTML = html;
-    overlay.classList.remove("hidden");
-  }
-
-  /* ============================= Notification watcher (only while app is open) ============================= */
-  var notifiedIds = {};
-  function ensureNotifyPermission(){
-    if (!("Notification" in window)) return;
-    if (Notification.permission === "default"){
-      Notification.requestPermission();
-    }
-  }
-  function startTimeWatcher(){
-    setInterval(function(){
-      var needsRerender = false;
-      state.specialPlans.forEach(function(p){
-        if (p.done) return;
-        var status = planTimeStatus(p);
-        if (status === "near" && !notifiedIds[p.id]){
-          notifiedIds[p.id] = true;
-          needsRerender = true;
-          if ("Notification" in window && Notification.permission === "granted"){
-            try { new Notification("یادآوری برنامه", { body: p.title + " — ساعت " + p.time }); } catch(e){}
-          }
-        }
-      });
-      if (currentTab === "special" || currentTab === "today") needsRerender = true;
-      if (needsRerender) { renderSpecial(); if (currentTab === "today") renderToday(); }
-    }, 20000);
-  }
-
-  /* ============================= Account tab ============================= */
-  function renderAccount(){
-    var el = document.getElementById("panel-account");
-    var days = daysRemaining();
-    var goalsAchieved = state.habits.filter(function(h){ return h.goalAchieved; }).length;
-    var totalDone = 0, totalMissed = 0;
-    state.habits.forEach(function(h){
-      var st = habitStats(h);
-      totalDone += st.completed;
-      totalMissed += st.missed;
-    });
-    var specialDone = state.specialPlans.filter(function(p){ return p.done; }).length;
-    var specialNotDone = state.specialPlans.filter(function(p){ return !p.done; }).length;
-
-    var html = "";
-    html += '<div class="card">';
-    html += '  <div class="account-card-head"><h3 style="margin:0;">حساب کاربری</h3></div>';
-    html += '  <div class="dimmer" style="margin-top:4px;">نام کاربری</div>';
-    html += '  <div style="font-weight:800;font-size:17px;margin-top:3px;">'+escapeHtml(state.account.username || "—")+'</div>';
-    html += '</div>';
-
-    html += '<div class="card">';
-    html += '  <div class="account-card-head"><h3 style="margin:0;">اشتراک</h3></div>';
-    html += '  <div class="sub-days-num '+(days<=5?'low':'')+'">'+faNum(Math.max(days,0))+' <span style="font-size:14px;font-weight:700;color:var(--text-dim);">روز باقی‌مانده</span></div>';
-    html += '  <div class="dimmer" style="margin-top:6px;">تاریخ پایان اشتراک: '+jalaliLongDate(state.account.subscriptionEnd)+'</div>';
-    html += '  <button class="btn btn-accent" style="margin-top:14px;" data-act="renew-subscription">تمدید اشتراک (۳۰ روز)</button>';
-    html += '  <div class="dimmer" style="margin-top:8px;">اتصال به درگاه پرداخت واقعی به‌زودی اضافه می‌شود.</div>';
-    html += '</div>';
-
-    html += '<div class="card"><h3>لاگ کلی</h3>';
-    html += '  <div class="log-grid">';
-    html += '    <div class="log-cell"><div class="num">'+faNum(goalsAchieved)+'</div><div class="lbl">اهداف محقق‌شده</div></div>';
-    html += '    <div class="log-cell"><div class="num">'+faNum(totalDone)+'</div><div class="lbl">برنامه‌های انجام‌شده</div></div>';
-    html += '    <div class="log-cell"><div class="num">'+faNum(totalMissed)+'</div><div class="lbl">برنامه‌های انجام‌نشده</div></div>';
-    html += '    <div class="log-cell"><div class="num">'+faNum(specialDone)+'</div><div class="lbl">برنامه‌های خاص انجام‌شده</div></div>';
-    html += '  </div>';
-    html += '  <div class="dimmer" style="margin-top:10px;">'+faNum(specialNotDone)+' برنامه خاص هنوز انجام نشده</div>';
-    html += '</div>';
-
-    html += '<div class="card logout-row">';
-    html += '  <button class="btn btn-ghost" data-act="logout">خروج از حساب</button>';
-    html += '</div>';
-
-    el.innerHTML = html;
-  }
-
-  /* ---------- TODAY ---------- */
-  function renderToday(){
-    var el = document.getElementById("panel-today");
-    var applicableHabits = state.habits.filter(function(h){ return isApplicable(h, viewedDayISO); });
-    var doneCount = applicableHabits.filter(function(h){ return isDone(h, viewedDayISO); }).length;
-    var total = applicableHabits.length;
-    var pct = total ? Math.round((doneCount/total)*100) : 0;
-
-    var r = 46, c = 2*Math.PI*r;
-    var offset = c - (pct/100)*c;
-
-    var isToday = viewedDayISO === todayISO();
-    var future = isFuture(viewedDayISO);
-
-    var html = "";
-    html += '<div class="nav-switch">';
-    html += '  <button class="chev" data-act="today-prev">‹</button>';
-    html += '  <div class="mid"><div class="big">'+jalaliShort(viewedDayISO)+'</div><div class="small">'+weekdayName(viewedDayISO)+(future? ' · <span style="color:var(--accent);">پیش‌بینی</span>' : '')+'</div>';
-    if(!isToday) html += '<button class="today-jump" data-act="today-jump">برو به امروز</button>';
-    html += '  </div>';
-    html += '  <button class="chev" data-act="today-next">›</button>';
-    html += '</div>';
-
-    html += '<div class="card">';
-    html += '  <div class="ring-wrap">';
-    html += '    <div class="ring-svg-box">';
-    html += '      <svg width="110" height="110" viewBox="0 0 110 110">';
-    html += '        <circle cx="55" cy="55" r="'+r+'" stroke="var(--ring-track)" stroke-width="10" fill="none"/>';
-    html += '        <circle cx="55" cy="55" r="'+r+'" stroke="url(#gradToday)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+offset+'"/>';
-    html += '        <defs><linearGradient id="gradToday" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3ecf9b"/><stop offset="100%" stop-color="#f2b84b"/></linearGradient></defs>';
-    html += '      </svg>';
-    html += '      <div class="ring-center">'+faNum(pct)+'٪</div>';
-    html += '    </div>';
-    html += '    <div class="ring-stats">';
-    html += '      <div class="ring-num">'+(total? (faNum(doneCount)+' از '+faNum(total)) : '—')+'</div>';
-    html += '      <div class="ring-label">'+(total? 'کار امروز انجام شده' : 'برنامه‌ای برای این روز نیست')+'</div>';
-    html += '    </div>';
-    html += '  </div>';
-    html += '</div>';
-
-    html += '<div class="card"><h3>کارهای امروز</h3>';
-    if (!applicableHabits.length){
-      html += '<div class="empty-state"><div class="e-icon">🌙</div><div class="e-title">هنوز برنامه‌ای ثبت نشده</div><div class="dimmer">از تب «برنامه‌ها» اولین برنامه‌ات رو اضافه کن</div></div>';
-    } else {
-      applicableHabits.forEach(function(h){
-        var checked = isDone(h, viewedDayISO);
-        html += '<div class="task-row">';
-        html += '  <button class="check '+(checked?'checked':'')+'" data-act="toggle" data-id="'+h.id+'">'+(checked?'✓':'')+'</button>';
-        html += '  <div class="task-info">';
-        html += '    <div class="task-name '+(checked?'checked-text':'')+'">'+escapeHtml(h.name)+'</div>';
-        var gTitles1 = habitGoalTitles(h);
-        if (gTitles1.length) html += '    <div class="task-goal">🎯 '+escapeHtml(gTitles1.join('، '))+'</div>';
-        html += '  </div>';
-        html += '</div>';
-      });
-    }
-    html += '</div>';
-
-    var dayPlans = state.specialPlans.filter(function(p){ return p.date === viewedDayISO; });
-    if (dayPlans.length){
-      html += '<div class="card"><h3>📌 برنامه خاص این روز</h3>';
-      dayPlans.forEach(function(p){
-        var status = planTimeStatus(p);
-        html += '<div class="special-item '+(status==="near"?"near-highlight":"")+'">';
-        html += '  <button class="check '+(p.done?'checked':'')+'" data-act="toggle-special" data-id="'+p.id+'">'+(p.done?'✓':'')+'</button>';
-        html += '  <div class="special-info">';
-        html += '    <div class="special-title '+(p.done?'checked-text':'')+'">'+escapeHtml(p.title)+'</div>';
-        html += '    '+planTimeBadge(p);
-        html += '  </div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
-
-    html += '<div class="card"><h3>یادداشت روز</h3>';
-    html += '  <textarea class="note" id="dailyNote" placeholder="پیشرفتی که امروز داشتی رو بنویس...">'+escapeHtml(state.notes[viewedDayISO]||"")+'</textarea>';
-    html += '</div>';
-
-    el.innerHTML = html;
-
-    var noteArea = document.getElementById("dailyNote");
-    if (noteArea){
-      noteArea.addEventListener("input", function(){
-        state.notes[viewedDayISO] = noteArea.value;
-        saveNoteDebounced();
-      });
-    }
-  }
-
-  /* ---------- WEEK ---------- */
-  function renderWeek(){
-    var el = document.getElementById("panel-week");
-    var dates = currentWeekDates();
-    var todayIdx = dates.indexOf(todayISO());
-
-    var startJ = jalaliShort(dates[0]), endJ = jalaliShort(dates[6]);
-
-    var habitsInWeek = state.habits.filter(function(h){
-      return dates.some(function(iso){ return isApplicable(h, iso); });
-    });
-
-    var weekResults = habitsInWeek.map(function(h){
-      return { habit:h, stats: habitWeekStats(h, dates) };
-    });
-
-    var totalApplicable = 0, totalDone = 0;
-    weekResults.forEach(function(r){ totalApplicable += r.stats.applicable; totalDone += r.stats.done; });
-    var overallPct = totalApplicable ? Math.round((totalDone/totalApplicable)*100) : 0;
-
-    var withPct = weekResults.filter(function(r){ return r.stats.pct!==null; });
-    var sorted = withPct.slice().sort(function(a,b){ return b.stats.pct - a.stats.pct; });
-    var best = sorted.slice(0, Math.min(3, sorted.length)).filter(function(r){ return r.stats.pct >= 70; });
-    var worst = sorted.slice().reverse().slice(0, Math.min(3, sorted.length)).filter(function(r){ return r.stats.pct < 70; });
-
-    var html = "";
-    html += '<div class="nav-switch">';
-    html += '  <button class="chev" data-act="week-prev">‹</button>';
-    html += '  <div class="mid"><div class="big">'+startJ+' تا '+endJ+'</div><div class="small">'+(weekOffset===0? 'این هفته' : (weekOffset<0? 'هفته گذشته' : 'هفته آینده'))+'</div></div>';
-    html += '  <button class="chev" data-act="week-next">›</button>';
-    html += '</div>';
-
-    html += '<div class="card">';
-    html += '  <div class="row-between"><h3 style="margin:0;">درصد کلی هفته</h3><span class="pill '+(overallPct>=70?'good':(overallPct>=40?'accent':'bad'))+'">'+faNum(overallPct)+'٪</span></div>';
-    html += '  <div class="progress-bar"><div style="width:'+overallPct+'%;"></div></div>';
-    html += '  <div class="dimmer">'+faNum(totalDone)+' از '+faNum(totalApplicable)+' مورد در این هفته انجام شده';
-    var missedTotal = totalApplicable - totalDone;
-    if (missedTotal > 0) html += ' — '+faNum(missedTotal)+' مورد جا افتاده';
-    html += '</div>';
-    html += '  <div class="week-day-strip">';
-    dates.forEach(function(iso){
-      var hasSpecial = state.specialPlans.some(function(p){ return p.date === iso; });
-      var isToday = iso === todayISO();
-      html += '<div class="wds-cell '+(isToday?'today':'')+'" '+(hasSpecial?'data-act="view-day-special" data-date="'+iso+'"':'')+'>';
-      html += '<span>'+WEEKDAY_FA_SHORT[isoToDate(iso).getDay()]+'</span>';
-      html += '<span style="font-weight:800;color:var(--text);">'+faNum(jalaliOf(iso).d)+'</span>';
-      html += hasSpecial ? '<span class="wds-dot"></span>' : '<span style="width:5px;height:5px;"></span>';
-      html += '</div>';
-    });
-    html += '  </div>';
-    html += '</div>';
-
-    html += '<div class="card"><h3>جدول هفتگی برنامه‌ها</h3>';
-    if (!habitsInWeek.length){
-      html += '<div class="empty-state"><div class="e-icon">▤</div><div class="e-title">برای این هفته برنامه‌ای ثبت نشده</div></div>';
-    } else {
-      html += '<div style="overflow-x:auto;"><table class="week-table"><thead><tr><th style="text-align:right;">برنامه</th>';
-      WEEK_ORDER.forEach(function(dow, idx){
-        html += '<th>'+WEEKDAY_FA_SHORT[dow]+'</th>';
-      });
-      html += '<th>٪</th></tr></thead><tbody>';
-      weekResults.forEach(function(r){
-        html += '<tr><td class="week-habit-name">'+escapeHtml(r.habit.name)+'</td>';
-        dates.forEach(function(iso, idx){
-          var cellClass, symbol;
-          if (!isApplicable(r.habit, iso)){
-            cellClass = "future"; symbol = "—";
-          } else if (isFuture(iso)){
-            cellClass = isDone(r.habit, iso) ? "planned" : "upcoming";
-            symbol = isDone(r.habit, iso) ? "✓" : "·";
-          } else {
-            cellClass = isDone(r.habit, iso) ? "done" : "missed";
-            symbol = isDone(r.habit, iso) ? "✓" : "×";
-          }
-          html += '<td><div class="wcell '+cellClass+'">'+symbol+'</div></td>';
-        });
-        var pctDisplay = r.stats.pct===null ? "—" : faNum(r.stats.pct)+"٪";
-        html += '<td class="week-pct">'+pctDisplay+'</td></tr>';
-      });
-      html += '</tbody></table></div>';
-    }
-    html += '</div>';
-
-    html += '<div class="card"><h3>🏆 بهترین برنامه‌های این هفته</h3><div class="best-worst">';
-    if (!best.length){
-      html += '<div class="dimmer">هنوز برنامه‌ای با عملکرد عالی این هفته نداری</div>';
-    } else {
-      best.forEach(function(r){
-        html += '<div class="bw-item"><div><div class="name">'+escapeHtml(r.habit.name)+'</div><div class="note">همیشه یا تقریبا همیشه انجام شده</div></div><span class="pill good">'+faNum(r.stats.pct)+'٪</span></div>';
-      });
-    }
-    html += '</div></div>';
-
-    html += '<div class="card"><h3>⚠️ برنامه‌های ضعیف‌تر این هفته</h3><div class="best-worst">';
-    if (!worst.length){
-      html += '<div class="dimmer">این هفته نقطه‌ضعف خاصی ثبت نشده، عالیه!</div>';
-    } else {
-      worst.forEach(function(r){
-        var note = r.stats.missedNames.length ? ('روزهای جا افتاده: '+r.stats.missedNames.join('، ')) : 'نیاز به تمرکز بیشتر';
-        html += '<div class="bw-item"><div><div class="name">'+escapeHtml(r.habit.name)+'</div><div class="note">'+note+'</div></div><span class="pill bad">'+faNum(r.stats.pct)+'٪</span></div>';
-      });
-    }
-    html += '</div></div>';
-
-    el.innerHTML = html;
-  }
-
-  /* ---------- MONTH ---------- */
-  function renderMonth(){
-    var el = document.getElementById("panel-month");
-    var info = currentJalaliMonthInfo();
-
-    var dayCells = [];
-    var leadingBlanks = (info.firstWeekday - 6 + 7) % 7;
-    for (var i=0;i<leadingBlanks;i++) dayCells.push(null);
-    for (var d=1; d<=info.daysInMonth; d++){
-      dayCells.push(jalaliToISO(info.jy, info.jm, d));
-    }
-
-    function dayCompletion(iso){
-      var applicable = state.habits.filter(function(h){ return isApplicable(h, iso); });
-      if (!applicable.length) return null;
-      var done = applicable.filter(function(h){ return isDone(h, iso); }).length;
-      return done/applicable.length;
-    }
-    function dayHasSpecial(iso){
-      return state.specialPlans.some(function(p){ return p.date === iso; });
-    }
-
-    var html = "";
-    html += '<div class="nav-switch">';
-    html += '  <button class="chev" data-act="month-prev">‹</button>';
-    html += '  <div class="mid"><div class="big">'+JMONTHS[info.jm-1]+' '+faNum(info.jy)+'</div><div class="small">'+(monthOffset===0?'این ماه':(monthOffset<0?'ماه گذشته':'ماه آینده'))+'</div></div>';
-    html += '  <button class="chev" data-act="month-next">›</button>';
-    html += '</div>';
-
-    html += '<div class="card"><h3>نمای کلی ماه</h3><div class="month-grid">';
-    // header order matches WEEK_ORDER (sat..fri)
-    var headOrder = [6,0,1,2,3,4,5];
-    headOrder.forEach(function(dow){ html += '<div class="wd">'+WEEKDAY_FA_SHORT[dow]+'</div>'; });
-    dayCells.forEach(function(iso){
-      if (iso===null){ html += '<div class="mcell pad"></div>'; return; }
-      var comp = dayCompletion(iso);
-      var future = isFuture(iso);
-      var bg = "var(--surface-2)";
-      if (comp !== null){
-        if (future){
-          bg = comp > 0 ? "rgba(242,184,75,.30)" : "var(--surface-2)";
-        } else if (comp >= 0.99) bg = "var(--good)";
-        else if (comp >= 0.5) bg = "rgba(62,207,155,.45)";
-        else if (comp > 0) bg = "rgba(240,96,90,.35)";
-        else bg = "var(--bad-dim)";
-      }
-      var isToday = iso===todayISO();
-      var dnum = jalaliOf(iso).d;
-      var hasSpecial = dayHasSpecial(iso);
-      html += '<div class="mcell '+(isToday?'today':'')+'" style="background:'+bg+';" '+(hasSpecial?'data-act="view-day-special" data-date="'+iso+'"':'')+' title="'+jalaliShort(iso)+'">'+faNum(dnum);
-      if (hasSpecial) html += '<span class="mcell-dot"></span>';
-      html += '</div>';
-    });
-    html += '</div>';
-    html += '<div class="dimmer" style="margin-top:12px;">رنگ سبز = روزهای پرانجام، رنگ قرمز = روزهای ضعیف عملکرد · نقطه‌ی زرد = برنامه خاص دارد</div>';
-    html += '</div>';
-
-    if (!state.habits.length){
-      html += '<div class="card"><div class="empty-state"><div class="e-icon">▦</div><div class="e-title">هنوز برنامه‌ای برای پیگیری ماهانه نداری</div></div></div>';
-    } else {
-      state.habits.forEach(function(h){
-        var st = habitStats(h);
-        var dots = "";
-        for (var day=1; day<=st.target; day++){
-          var iso = addDaysISO(h.startDate, day-1);
-          var cls = "future";
-          if (!isFuture(iso)){
-            cls = isDone(h, iso) ? "done" : "missed";
-          }
-          dots += '<div class="dot '+cls+'" title="'+jalaliShort(iso)+'"></div>';
-        }
-        html += '<div class="card">';
-        html += '  <div class="habit-card-head"><div><div class="habit-title">'+escapeHtml(h.name)+'</div>';
-        var gTitles2 = habitGoalTitles(h);
-        if (gTitles2.length) html += '<div class="habit-goal">🎯 '+escapeHtml(gTitles2.join('، '))+'</div>';
-        html += '  </div>'+(h.goalAchieved? '<span class="pill good">هدف محقق شد</span>':'')+'</div>';
-        html += '  <div class="dotgrid">'+dots+'</div>';
-        html += '  <div class="progress-bar"><div style="width:'+st.progressPct+'%;"></div></div>';
-        html += '  <div class="habit-stats-line">';
-        html += '    <span class="pill accent">پیشرفت هدف '+faNum(st.progressPct)+'٪</span>';
-        html += '    <span class="pill '+(st.negativePct>30?'bad':'neutral')+'">افت عملکرد '+faNum(st.negativePct)+'٪</span>';
-        html += '    <span class="pill neutral">'+faNum(st.completed)+' از '+faNum(st.target)+' روز</span>';
-        html += '  </div>';
-        html += '  <div class="goal-check-row '+(h.goalAchieved?'achieved':'')+'">';
-        html += '    <button class="check '+(h.goalAchieved?'checked':'')+'" data-act="toggle-goal" data-id="'+h.id+'">'+(h.goalAchieved?'✓':'')+'</button>';
-        html += '    <label>هدف این برنامه رو محقق کردم</label>';
-        html += '  </div>';
-
-        var linkedReward = h.rewardId ? state.rewards.find(function(rw){ return rw.id===h.rewardId; }) : null;
-        html += '  <div class="reward-row">';
-        html += '    <div class="reward-row-top"><span class="reward-row-label">🎁 پاداش برنامه</span>'+(linkedReward && linkedReward.done ? '<span class="pill good">فعال شده</span>' : '')+'</div>';
-        if (linkedReward){
-          html += '    <div class="reward-row-text">'+escapeHtml(linkedReward.text)+'</div>';
-          var rewardDisabled = (!h.goalAchieved || linkedReward.done);
-          html += '    <button class="btn '+(linkedReward.done? 'btn-ghost':'btn-accent')+' btn-sm" data-act="activate-reward" data-id="'+linkedReward.id+'" '+(rewardDisabled?'disabled':'')+'>'+(linkedReward.done? '✓ فعال شده' : 'فعال‌سازی پاداش')+'</button>';
-        } else {
-          html += '    <div class="dimmer">برای این برنامه پاداشی انتخاب نکردی — از ویرایش برنامه (تب برنامه‌ها) یکی انتخاب کن</div>';
-        }
-        html += '  </div>';
-        html += '</div>';
-      });
-    }
-
-    el.innerHTML = html;
-  }
-
-  /* ---------- HABITS (manage) ---------- */
-  function renderHabits(){
-    var el = document.getElementById("panel-habits");
-    var html = "";
-    html += '<button class="btn btn-accent" data-act="open-add-habit" style="margin-bottom:16px;">＋ افزودن برنامه جدید</button>';
-
-    if (!state.habits.length){
-      html += '<div class="card"><div class="empty-state"><div class="e-icon">✚</div><div class="e-title">هنوز برنامه‌ای اضافه نکردی</div><div class="dimmer">مثال: باشگاه — هدف رسیدن به وزن ۶۰ کیلو، ۳۰ روز</div></div></div>';
-    } else {
-      state.habits.forEach(function(h){
-        var st = habitStats(h);
-        html += '<div class="card">';
-        html += '  <div class="habit-card-head"><div><div class="habit-title">'+escapeHtml(h.name)+'</div>';
-        var gTitles2 = habitGoalTitles(h);
-        if (gTitles2.length) html += '<div class="habit-goal">🎯 '+escapeHtml(gTitles2.join('، '))+'</div>';
-        html += '  <div class="dimmer" style="margin-top:6px;">شروع: '+jalaliShort(h.startDate)+' — دوره: '+faNum(h.targetDays)+' روز</div>';
-        html += '  </div>'+(h.goalAchieved? '<span class="pill good">محقق شد</span>':'')+'</div>';
-        html += '  <div class="progress-bar"><div style="width:'+st.progressPct+'%;"></div></div>';
-        html += '  <div class="habit-stats-line">';
-        html += '    <span class="pill accent">پیشرفت '+faNum(st.progressPct)+'٪</span>';
-        html += '    <span class="pill '+(st.negativePct>30?'bad':'neutral')+'">افت '+faNum(st.negativePct)+'٪</span>';
-        html += '  </div>';
-        html += '  <div class="habit-actions">';
-        html += '    <button class="btn btn-ghost btn-sm" data-act="edit-habit" data-id="'+h.id+'">ویرایش</button>';
-        html += '    <button class="btn btn-danger-ghost btn-sm" data-act="delete-habit" data-id="'+h.id+'">حذف</button>';
-        html += '  </div>';
-        html += '</div>';
-      });
-    }
-    el.innerHTML = html;
-  }
-
-  /* ---------- GOALS ---------- */
-  function sortedGoals(){
-    return state.goals.slice().sort(function(a,b){
-      if(a.targetDate && b.targetDate) return a.targetDate < b.targetDate ? -1 : (a.targetDate > b.targetDate ? 1 : 0);
-      if(a.targetDate) return -1;
-      if(b.targetDate) return 1;
-      return 0;
-    });
-  }
-
-  function renderGoals(){
-    var el = document.getElementById("panel-goals");
-    var html = "";
-    html += '<button class="btn btn-accent" data-act="open-add-goal" style="margin-bottom:16px;">＋ افزودن هدف جدید</button>';
-    html += '<div class="dimmer" style="margin-bottom:14px;">هر هدف رو یک‌بار اینجا بساز، بعد از تب «برنامه‌ها» همون هدف رو برای هر برنامه انتخاب کن — نیازی به نوشتن دوباره‌ی هدف نیست.</div>';
-
-    var goals = sortedGoals();
-    if (!goals.length){
-      html += '<div class="card"><div class="empty-state"><div class="e-icon">🎯</div><div class="e-title">هنوز هدفی ثبت نشده</div><div class="dimmer">یک هدف بساز و برنامه‌هات رو بهش وصل کن</div></div></div>';
-    } else {
-      goals.forEach(function(g){
-        var st = goalStats(g);
-        html += '<div class="card">';
-        html += '  <div class="habit-card-head"><div><div class="habit-title">🎯 '+escapeHtml(g.title)+'</div>';
-        if (g.targetDate){
-          var daysLeft = diffDaysISO(todayISO(), g.targetDate);
-          var dueLabel = daysLeft < 0 ? 'تاریخ هدف گذشته' : ('تا تاریخ هدف: '+faNum(daysLeft)+' روز مانده');
-          html += '<div class="habit-goal">📅 '+jalaliLongDate(g.targetDate)+' — <span style="color:'+(daysLeft<0?'var(--bad)':'var(--accent)')+';">'+dueLabel+'</span></div>';
-        }
-        html += '  </div>'+(st.pct>=100? '<span class="pill good">تکمیل شد</span>':'')+'</div>';
-        html += '  <div class="progress-bar"><div style="width:'+st.pct+'%;"></div></div>';
-        html += '  <div class="habit-stats-line">';
-        html += '    <span class="pill accent">درصد موفقیت هدف '+faNum(st.pct)+'٪</span>';
-        html += '    <span class="pill neutral">'+(st.total? (faNum(st.total)+' برنامه مرتبط') : 'هنوز برنامه‌ای وصل نشده')+'</span>';
-        if (st.total) html += '    <span class="pill neutral">'+faNum(st.achievedCount)+' از '+faNum(st.total)+' محقق‌شده</span>';
-        html += '  </div>';
-        html += '  <div class="habit-actions">';
-        html += '    <button class="btn btn-ghost btn-sm" data-act="edit-goal" data-id="'+g.id+'">ویرایش</button>';
-        html += '    <button class="btn btn-danger-ghost btn-sm" data-act="delete-goal" data-id="'+g.id+'">حذف</button>';
-        html += '  </div>';
-        html += '</div>';
-      });
-    }
-    el.innerHTML = html;
-  }
-
-  function openGoalModal(existingId){
-    var existing = existingId ? state.goals.find(function(g){ return g.id===existingId; }) : null;
-    var overlay = document.getElementById("modalOverlay");
-    var body = document.getElementById("modalBody");
-    var baseJ = existing && existing.targetDate ? jalaliOf(existing.targetDate) : jalaliOf(todayISO());
-
-    var html = "";
-    html += '<h2>'+(existing? 'ویرایش هدف' : 'افزودن هدف جدید')+'</h2>';
-    html += '<div class="field"><label>عنوان هدف</label><input type="text" id="mGoalTitle" placeholder="مثلاً: رسیدن به وزن ۶۰ کیلو" value="'+(existing? escapeHtml(existing.title):"")+'"></div>';
-    html += '<div class="field-row"><input type="checkbox" id="mGoalDateEnabled" '+(existing && existing.targetDate ? "checked":"")+'><label for="mGoalDateEnabled">تاریخ هدف مشخصی داره</label></div>';
-    html += '<div class="field" id="mGoalDateField" style="'+(existing && existing.targetDate ? "" : "display:none;")+'">';
-    html += '  <label>تاریخ (شمسی)</label>';
-    html += '  <div style="display:flex;gap:8px;">';
-    html += '    <select id="mGoalDay" style="flex:.8;">'+jalaliDayOptionsHtml(baseJ.d, jalaliMonthLength(baseJ.y, baseJ.m))+'</select>';
-    html += '    <select id="mGoalMonth" style="flex:1.6;">'+jalaliMonthOptionsHtml(baseJ.m)+'</select>';
-    html += '    <input type="number" id="mGoalYear" style="flex:1;" value="'+baseJ.y+'">';
-    html += '  </div>';
-    html += '</div>';
-    html += '<div class="modal-actions">';
-    html += '  <button class="btn btn-ghost" data-act="close-modal">انصراف</button>';
-    html += '  <button class="btn btn-accent" data-act="save-goal" data-id="'+(existing? existing.id : "")+'">ذخیره</button>';
-    html += '</div>';
-
-    body.innerHTML = html;
-    overlay.classList.remove("hidden");
-
-    var cb = document.getElementById("mGoalDateEnabled");
-    cb.addEventListener("change", function(){
-      document.getElementById("mGoalDateField").style.display = cb.checked ? "" : "none";
-    });
-
-    function refreshDayOptions(){
-      var m = parseInt(document.getElementById("mGoalMonth").value, 10);
-      var y = parseInt(document.getElementById("mGoalYear").value, 10) || baseJ.y;
-      var daySelect = document.getElementById("mGoalDay");
-      var currentDay = parseInt(daySelect.value, 10) || 1;
-      var maxDay = jalaliMonthLength(y, m);
-      if (currentDay > maxDay) currentDay = maxDay;
-      daySelect.innerHTML = jalaliDayOptionsHtml(currentDay, maxDay);
-    }
-    document.getElementById("mGoalMonth").addEventListener("change", refreshDayOptions);
-    document.getElementById("mGoalYear").addEventListener("change", refreshDayOptions);
-  }
-
-  function saveGoalFromModal(existingId){
-    var title = document.getElementById("mGoalTitle").value.trim();
-    if (!title){ document.getElementById("mGoalTitle").focus(); return; }
-    var dateEnabled = document.getElementById("mGoalDateEnabled").checked;
-    var targetDate = null;
-    if (dateEnabled){
-      var day = parseInt(document.getElementById("mGoalDay").value, 10);
-      var month = parseInt(document.getElementById("mGoalMonth").value, 10);
-      var year = parseInt(document.getElementById("mGoalYear").value, 10);
-      if (!year || year < 1200 || year > 1600 || !month || !day){ document.getElementById("mGoalYear").focus(); return; }
-      targetDate = jalaliToISO(year, month, day);
-    }
-
-    if (existingId){
-      var g = state.goals.find(function(x){ return x.id===existingId; });
-      if (g){ g.title = title; g.targetDate = targetDate; }
-    } else {
-      state.goals.push({ id: uid(), title: title, targetDate: targetDate, createdAt: todayISO() });
-    }
-    saveState();
-    closeModal();
-    renderAll();
-  }
-
-  function deleteGoal(id){
-    state.goals = state.goals.filter(function(x){ return x.id!==id; });
-    state.habits.forEach(function(h){
-      if (h.goalIds){
-        var idx = h.goalIds.indexOf(id);
-        if (idx !== -1) h.goalIds.splice(idx, 1);
-      }
-    });
-    saveState();
-    renderAll();
-  }
-
-  /* ---------- REWARDS ---------- */
-  function renderRewards(){
-    var el = document.getElementById("panel-rewards");
-    var html = "";
-    html += '<div class="card">';
-    html += '  <h3>پاداش خودت رو تعریف کن</h3>';
-    html += '  <div class="add-inline"><input type="text" id="newRewardInput" placeholder="مثلاً: یک وعده رستوران دلخواه"><button class="btn btn-accent btn-sm" data-act="add-reward">افزودن</button></div>';
-    if (!state.rewards.length){
-      html += '<div class="empty-state"><div class="e-icon">★</div><div class="e-title">هنوز پاداشی تعریف نشده</div><div class="dimmer">بعد از رسیدن به یک هدف، خودتو تشویق کن</div></div>';
-    } else {
-      state.rewards.forEach(function(r){
-        html += '<div class="reward-item">';
-        html += '  <button class="check '+(r.done?'checked':'')+'" data-act="toggle-reward" data-id="'+r.id+'">'+(r.done?'✓':'')+'</button>';
-        html += '  <div class="reward-text '+(r.done?'done':'')+'">'+escapeHtml(r.text)+'</div>';
-        html += '  <button class="x-btn" data-act="delete-reward" data-id="'+r.id+'">×</button>';
-        html += '</div>';
-      });
-    }
-    html += '</div>';
-    el.innerHTML = html;
-
-    var input = document.getElementById("newRewardInput");
-    if (input){
-      input.addEventListener("keydown", function(e){
-        if (e.key === "Enter"){ addReward(); }
-      });
-    }
-  }
-
-  function addReward(){
-    var input = document.getElementById("newRewardInput");
-    var val = input.value.trim();
-    if (!val) return;
-    state.rewards.push({ id: uid(), text: val, done:false });
-    saveState();
-    renderRewards();
-  }
-
-  /* ============================= Modal: Add/Edit Habit ============================= */
-  function openHabitModal(existingId){
-    var existing = existingId ? state.habits.find(function(h){ return h.id===existingId; }) : null;
-    var overlay = document.getElementById("modalOverlay");
-    var body = document.getElementById("modalBody");
-
-    var html = "";
-    html += '<h2>'+(existing? 'ویرایش برنامه' : 'افزودن برنامه جدید')+'</h2>';
-    html += '<div class="field"><label>نام تسک</label><input type="text" id="mHabitName" placeholder="مثلاً: باشگاه" value="'+(existing? escapeHtml(existing.name):"")+'"></div>';
-    html += '<div class="field"><label>اهداف (اختیاری — می‌تونی چند مورد انتخاب کنی)</label>';
-    html += '<div class="goal-check-list" id="mHabitGoalsList">';
-    var existingGoalIds = existing && existing.goalIds ? existing.goalIds : [];
-    sortedGoals().forEach(function(g){
-      var checked = existingGoalIds.indexOf(g.id) !== -1 ? "checked" : "";
-      html += '<label><input type="checkbox" class="mHabitGoalCheckbox" value="'+g.id+'" '+checked+'>'+escapeHtml(g.title)+'</label>';
-    });
-    if (!sortedGoals().length){
-      html += '<div class="dimmer">هنوز هدفی نساختی — از پایین یکی اضافه کن</div>';
-    }
-    html += '</div>';
-    html += '<div class="goal-add-row"><input type="text" id="mHabitNewGoalTitle" placeholder="عنوان هدف جدید"><button type="button" class="btn btn-ghost btn-sm" id="mHabitAddGoalBtn" style="width:auto;">افزودن</button></div>';
-    html += '<div class="hint">هر هدف فقط یک‌بار ساخته می‌شود — از چک‌باکس‌ها هر تعداد که خواستی انتخاب کن یا هدف تازه بساز.</div>';
-    html += '</div>';
-    html += '<div class="field"><label>مدت زمان تکرار (روز)</label><input type="number" min="1" id="mHabitTarget" value="'+(existing? existing.targetDays : 30)+'"><div class="hint">پیشنهاد می‌شود حداقل ۳۰ روز باشد، اما می‌تونی هر عددی که خودت مدنظرته وارد کنی.</div></div>';
-    html += '<div class="field"><label>پاداش این برنامه</label>';
-    if (state.rewards.length){
-      html += '<select id="mHabitReward"><option value="">بدون پاداش</option>';
-      state.rewards.forEach(function(r){
-        var sel = (existing && existing.rewardId === r.id) ? "selected" : "";
-        html += '<option value="'+r.id+'" '+sel+'>'+escapeHtml(r.text)+'</option>';
-      });
-      html += '</select>';
-      html += '<div class="hint">وقتی هدف این برنامه رو تیک بزنی، می‌تونی این پاداش رو از تب ماهانه فعال کنی.</div>';
-    } else {
-      html += '<div class="hint">هنوز پاداشی نساختی — اول از تب «پاداش» یکی اضافه کن، بعد اینجا انتخابش کن.</div>';
-    }
-    html += '</div>';
-    html += '<div class="modal-actions">';
-    html += '  <button class="btn btn-ghost" data-act="close-modal">انصراف</button>';
-    html += '  <button class="btn btn-accent" data-act="save-habit" data-id="'+(existing? existing.id : "")+'">ذخیره</button>';
-    html += '</div>';
-
-    body.innerHTML = html;
-    overlay.classList.remove("hidden");
-
-    var addGoalBtn = document.getElementById("mHabitAddGoalBtn");
-    var newGoalTitleInput = document.getElementById("mHabitNewGoalTitle");
-    var goalsListEl = document.getElementById("mHabitGoalsList");
-    if (addGoalBtn){
-      addGoalBtn.addEventListener("click", function(){
-        var t = newGoalTitleInput.value.trim();
-        if (!t) return;
-        var g = state.goals.find(function(x){ return x.title === t; });
-        var isNew = false;
-        if (!g){
-          g = { id: uid(), title: t, targetDate: null, createdAt: todayISO() };
-          state.goals.push(g);
-          isNew = true;
-        }
-        var already = goalsListEl.querySelector('input[value="'+g.id+'"]');
-        if (already){
-          already.checked = true;
-        } else {
-          var emptyHint = goalsListEl.querySelector(".dimmer");
-          if (emptyHint) emptyHint.remove();
-          var lbl = document.createElement("label");
-          lbl.innerHTML = '<input type="checkbox" class="mHabitGoalCheckbox" value="'+g.id+'" checked>'+escapeHtml(g.title);
-          goalsListEl.appendChild(lbl);
-        }
-        newGoalTitleInput.value = "";
-        if (isNew) saveState();
-      });
-      newGoalTitleInput.addEventListener("keydown", function(e){
-        if (e.key === "Enter"){ e.preventDefault(); addGoalBtn.click(); }
-      });
-    }
-  }
-
-  function closeModal(){
-    document.getElementById("modalOverlay").classList.add("hidden");
-  }
-
-  function saveHabitFromModal(existingId){
-    var name = document.getElementById("mHabitName").value.trim();
-    var target = parseInt(document.getElementById("mHabitTarget").value, 10);
-    var rewardSelect = document.getElementById("mHabitReward");
-    var rewardId = rewardSelect ? (rewardSelect.value || null) : null;
-    if (!name){ document.getElementById("mHabitName").focus(); return; }
-    if (!target || target < 1) target = 30;
-
-    // Collect every checked goal checkbox — a habit can be linked to any number
-    // of goals (or none).
-    var goalIds = [];
-    document.querySelectorAll(".mHabitGoalCheckbox:checked").forEach(function(cb){ goalIds.push(cb.value); });
-
-    // If the person typed a new goal title but never clicked "افزودن", pick it
-    // up here too so it isn't silently lost.
-    var pendingNewGoalTitle = document.getElementById("mHabitNewGoalTitle");
-    if (pendingNewGoalTitle && pendingNewGoalTitle.value.trim()){
-      var pendingTitle = pendingNewGoalTitle.value.trim();
-      var pendingGoal = state.goals.find(function(g){ return g.title === pendingTitle; });
-      if (!pendingGoal){
-        pendingGoal = { id: uid(), title: pendingTitle, targetDate: null, createdAt: todayISO() };
-        state.goals.push(pendingGoal);
-      }
-      if (goalIds.indexOf(pendingGoal.id) === -1) goalIds.push(pendingGoal.id);
-    }
-
-    if (existingId){
-      var h = state.habits.find(function(x){ return x.id===existingId; });
-      if (h){ h.name = name; h.goalIds = goalIds; h.targetDays = target; h.rewardId = rewardId; }
-    } else {
-      state.habits.push({
-        id: uid(),
-        name: name,
-        goalIds: goalIds,
-        targetDays: target,
-        startDate: todayISO(),
-        goalAchieved: false,
-        rewardId: rewardId,
-        completions: {}
-      });
-    }
-    saveState();
-    closeModal();
-    renderAll();
-  }
-
-  /* ============================= Event delegation ============================= */
-  document.addEventListener("click", function(e){
-    var act = e.target.closest("[data-act]");
-    if (!act) return;
-    var action = act.getAttribute("data-act");
-    var id = act.getAttribute("data-id");
-
-    switch(action){
-      case "toggle": {
-        var h = state.habits.find(function(x){ return x.id===id; });
-        if (h){
-          h.completions[viewedDayISO] = !h.completions[viewedDayISO];
-          if (!h.completions[viewedDayISO]) delete h.completions[viewedDayISO];
-          saveState(); renderAll();
-        }
-        break;
-      }
-      case "toggle-goal": {
-        var hb = state.habits.find(function(x){ return x.id===id; });
-        if (hb){ hb.goalAchieved = !hb.goalAchieved; saveState(); renderAll(); }
-        break;
-      }
-      case "today-prev": viewedDayISO = addDaysISO(viewedDayISO, -1); renderToday(); break;
-      case "today-next": viewedDayISO = addDaysISO(viewedDayISO, 1); renderToday(); break;
-      case "today-jump": viewedDayISO = todayISO(); renderToday(); break;
-      case "week-prev": weekOffset--; renderWeek(); break;
-      case "week-next": weekOffset++; renderWeek(); break;
-      case "month-prev": monthOffset--; renderMonth(); break;
-      case "month-next": monthOffset++; renderMonth(); break;
-      case "open-add-habit": openHabitModal(null); break;
-      case "edit-habit": openHabitModal(id); break;
-      case "delete-habit": {
-        if (confirm("این برنامه و کل سابقه‌اش حذف بشه؟")){
-          state.habits = state.habits.filter(function(x){ return x.id!==id; });
-          saveState(); renderAll();
-        }
-        break;
-      }
-      case "close-modal": closeModal(); break;
-      case "save-habit": saveHabitFromModal(id || null); break;
-      case "open-add-goal": openGoalModal(null); break;
-      case "edit-goal": openGoalModal(id); break;
-      case "save-goal": saveGoalFromModal(id || null); break;
-      case "delete-goal": {
-        if (confirm("این هدف حذف بشه؟ برنامه‌های وصل‌شده به این هدف، بدون هدف باقی می‌مانند.")){
-          deleteGoal(id);
-        }
-        break;
-      }
-      case "add-reward": addReward(); break;
-      case "activate-reward": {
-        var rw = state.rewards.find(function(x){ return x.id===id; });
-        if (rw && !rw.done){ rw.done = true; saveState(); renderAll(); }
-        break;
-      }
-      case "toggle-reward": {
-        var r = state.rewards.find(function(x){ return x.id===id; });
-        if (r){ r.done = !r.done; saveState(); renderRewards(); }
-        break;
-      }
-      case "delete-reward": {
-        state.rewards = state.rewards.filter(function(x){ return x.id!==id; });
-        saveState(); renderRewards();
-        break;
-      }
-      case "open-add-special": openSpecialModal(null); break;
-      case "edit-special": openSpecialModal(id); break;
-      case "save-special": saveSpecialFromModal(id || null); break;
-      case "delete-special": {
-        if (confirm("این برنامه خاص حذف بشه؟")){
-          state.specialPlans = state.specialPlans.filter(function(x){ return x.id!==id; });
-          saveState(); renderAll();
-        }
-        break;
-      }
-      case "toggle-special": {
-        var sp = state.specialPlans.find(function(x){ return x.id===id; });
-        if (sp){ sp.done = !sp.done; saveState(); renderAll(); }
-        break;
-      }
-      case "renew-subscription": renewSubscription(); break;
-      case "logout": doLogout(); break;
-      case "view-day-special": {
-        var dateAttr = act.getAttribute("data-date");
-        if (dateAttr) openDaySpecialModal(dateAttr);
-        break;
-      }
-      case "open-account": {
-        currentTab = "account";
-        document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab")==="account"); });
-        document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
-        document.getElementById("panel-account").classList.add("active");
-        break;
-      }
-    }
+  return total;
+}
+
+function render(){
+  const totalDep = renderList('dep');
+  const totalExp = renderList('exp');
+  const net = totalDep - totalExp;
+
+  document.getElementById('totalDep').textContent = fmtNum(totalDep);
+  document.getElementById('totalExp').textContent = fmtNum(totalExp);
+
+  const netEl = document.getElementById('netAmount');
+  netEl.textContent = fmtToman(net);
+  netEl.classList.toggle('neg', net < 0);
+}
+
+loadData();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
   });
-
-  document.getElementById("modalOverlay").addEventListener("click", function(e){
-    if (e.target.id === "modalOverlay") closeModal();
-  });
-
-  document.getElementById("resetBtn").addEventListener("click", function(){
-    if (confirm("همه‌ی داده‌های پلنر (برنامه‌ها، برنامه‌های خاص، پاداش‌ها، یادداشت‌ها) برای همیشه پاک بشه؟")){
-      state = defaultState();
-      saveState();
-      checkLockState();
-      renderAll();
-    }
-  });
-
-  /* ---------- Tabs ---------- */
-  document.querySelectorAll(".tab-btn").forEach(function(btn){
-    btn.addEventListener("click", function(){
-      var tab = btn.getAttribute("data-tab");
-      currentTab = tab;
-      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.toggle("active", b===btn); });
-      document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
-      document.getElementById("panel-"+tab).classList.add("active");
-    });
-  });
-
-  /* ============================= Init ============================= */
-  /* Rendering happens once auth resolves — see onAuthed() above. */
-
-})();
-  if("serviceWorker" in navigator){
-    window.addEventListener("load", function(){
-      navigator.serviceWorker.register("sw.js").catch(function(){});
-    });
-  }
+}
 </script>
-</body>
-</html>
+
+</body></html>
